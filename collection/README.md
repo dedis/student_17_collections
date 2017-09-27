@@ -20,3 +20,4 @@ This can be achieved using `collection`s:
  * Users will be able to query the server, and use their `verifier`s to verify that it provides honest answers.
 
  
+![collection](https://raw.githubusercontent.com/dedis/student_17_collections/develop/collection/assets/images/collection.gif "Example use scenario")
