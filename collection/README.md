@@ -1,4 +1,5 @@
 # collection
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/dedis/student_17_collections/collection)
 
 ## Overview
 
