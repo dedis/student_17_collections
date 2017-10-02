@@ -196,7 +196,7 @@ func sha256(item interface{}, items... interface{}) [csha256.Size]byte {
             binary.BigEndian.PutUint64(buffer[1:], uint64(len(value)))
 
             for index := 0; index < len(value); index++ {
-                if(value[index]) {
+                if value[index] {
                     buffer[9 + index] = 1
                 } else {
                     buffer[9 + index] = 0
