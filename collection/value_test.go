@@ -38,10 +38,23 @@ func TestStake64(test *testing.T) {
         left := stake64.Encode(leftstake)
         right := stake64.Encode(rightstake)
 
+        wrongquerystake := parentstake + uint64(rand.Uint32())
+        wrongquery := stake64.Encode(wrongquerystake)
+
+        navigation, err := stake64.Navigate(wrongquery, parent, left, right)
+
+        if err == nil {
+            test.Error("[navigate]", "Error not yielded on illegal query.")
+        }
+
+        if stake64.Decode(wrongquery) != wrongquerystake {
+            test.Error("[navigate]", "Navigate altered illegal query without navigating.")
+        }
+
         querystake := rand.Uint64() % parentstake
         query := stake64.Encode(querystake)
 
-        navigation, err := stake64.Navigate(query, parent, left, right)
+        navigation, err = stake64.Navigate(query, parent, left, right)
 
         if err != nil {
             test.Error("[navigate]", "Error yielded on legal query.")
