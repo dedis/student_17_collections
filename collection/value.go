@@ -13,6 +13,25 @@ type value interface {
 
 // Structs
 
+// Data
+
+type Data struct {
+}
+
+// Interface
+
+func (this Data) Placeholder() []byte {
+    return []byte{}
+}
+
+func (this Data) Parent(left []byte, right []byte) []byte {
+    return []byte{}
+}
+
+func (this Data) Navigate(query []byte, parent []byte, left []byte, right []byte) (bool, error) {
+    return false, errors.New("Data: data values cannot be navigated.")
+}
+
 // Stake64
 
 type Stake64 struct {

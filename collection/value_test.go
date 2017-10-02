@@ -3,6 +3,23 @@ package collection
 import "testing"
 import "math/rand"
 
+func TestData(test *testing.T) {
+    var data Data
+
+    if len(data.Placeholder()) != 0 {
+        test.Error("[placeholder]", "Non-empty placeholder.")
+    }
+
+    if len(data.Parent([]byte("leftdata"), []byte("rightdata"))) != 0 {
+        test.Error("[parent]", "Non-empty parent: Data should not propagate anything to its parent.")
+    }
+
+    _, err := data.Navigate([]byte("query"), []byte("parentdata"), []byte("leftdata"), []byte("rightdata"))
+    if err == nil {
+        test.Error("[navigate]", "Navigation does not yield errors. It should be impossible to navigate Data.")
+    }
+}
+
 func TestStake64(test *testing.T) {
     var stake64 Stake64
 
