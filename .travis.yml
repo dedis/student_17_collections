@@ -1,6 +1,11 @@
 language: go
+sudo: false
+
+before_install:
+  - go get github.com/mattn/goveralls
+  - go get golang.org/x/tools/cmd/cover
 
 script:
   - |
       cd collection &&
-      go test
+      $HOME/gopath/bin/goveralls -repotoken=8nJLCFekIw7lstdhTL5xNSvMNwrsnnIFl
