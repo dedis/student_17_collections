@@ -1,15 +1,15 @@
 package collection
 
 import "testing"
-import "crypto/sha256"
+import csha256 "crypto/sha256"
 import "encoding/hex"
 
-func TestHash(test *testing.T) {
+func TestSha256(test *testing.T) {
     check := func(name string, hexref string, item interface{}, items... interface{}) {
         reference, _ := hex.DecodeString(hexref)
-        response := hash(item, items...)
+        response := sha256(item, items...)
 
-        for i := 0; i < sha256.Size; i++ {
+        for i := 0; i < csha256.Size; i++ {
             if response[i] != reference[i] {
                 test.Error(name, "Hash mismatch.")
                 return
