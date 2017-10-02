@@ -4,6 +4,49 @@ import "reflect"
 import csha256 "crypto/sha256"
 import "encoding/binary"
 
+/*
+    sha256 computes the SHA256 hash of one or more values in a way that takes
+    into account their types, their order, and their structure.
+
+    sha256() accepts one or more values of the following types:
+     - Fixed size signed integers: `int8`, `int16`, `int32`, and `int64`.
+     - Fixed size unsigned integers: `uint8`, `uint16`, `uint32`, and `uint64`.
+     - `string`
+     - N-dimensional slices (with N >= 1) of any of the above.
+
+    For example, the following are valid calls to sha256:
+     - `sha256(uint64(33))`
+     - `sha256("Hello World!")`
+     - `sha256(uint64(12), int32(-4), "What", "a", "nice", "day")`
+     - `sha256([]uint64{1, 2, 3, 4, 5})`
+     - `sha256([][]uint8{{0, 1, 2}, {3, 4, 5}, {6, 7, 8}})`
+
+    But the following are *not* valid calls to sha256:
+     - `sha256(33)` (33 is an `int`, whose size depends on the environment).
+     - `sha256([4]int8{1, 2, 3, 4})` (arrays are not accepted, only slices).
+     - `sha256(my_fancy_object)` (structs are not accepted)
+     - `sha256(&my_uint8)` (pointers are not accepted)
+
+    This hash function is endianess-independent, and its value is determined
+    also by the types and the structure of the values provided. For example:
+     - `sha256(int8(44)) != sha256(uint8(44))`
+     - `sha256(uint8(44), uint8(55)) != sha256([]uint8{44, 55})`
+     - `sha256("Hello World!") != sha256([]uint8("Hello World!"))`
+
+    sha256 first encodes the values provided into a buffer, then returns the
+    sha256 hash of the buffer. The encoding follows the following rules:
+     - All arithmetic values are encoded in Big Endian format.
+     - Before encoding any value, a one-byte progressive constant is encoded
+       to identify the type of the value. The constant assumes values 0, 1, ...
+       on `bool`, `int8`, `int16`, `int32`, `int64`, `uint8`, `uint16`,
+       `uint32`, `uint64`, `[]bool`, `[]int8`, `[]int16`, `[]int32`, `[]uint8`,
+       `[]uint16`, `[]uint32`, `[]uint64`, and `string` respectively.
+     - Before encoding a slice value, an `uint64` is encoded to identify
+       the length of the slice.
+     - Slices of slices use a special one-byte constant value, and a `uint64`
+       value to identify their length. Encoding is then done by recurring
+       depth-first on each of their elements.
+*/
 func sha256(item interface{}, items... interface{}) [csha256.Size]byte {
     const(
         boolid = iota
