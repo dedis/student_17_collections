@@ -1,5 +1,7 @@
 # collection
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/dedis/student_17_collections/collection) [![Build Status](https://travis-ci.org/dedis/student_17_collections.svg?branch=develop)](https://travis-ci.org/dedis/student_17_collections) [![Coverage Status](https://coveralls.io/repos/github/dedis/student_17_collections/badge.svg?branch=develop)](https://coveralls.io/github/dedis/student_17_collections?branch=develop)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/dedis/student_17_collections/collection)
+[![Build Status](https://travis-ci.org/dedis/student_17_collections.svg?branch=develop)](https://travis-ci.org/dedis/student_17_collections)
+[![Coverage Status](https://coveralls.io/repos/github/dedis/student_17_collections/badge.svg?branch=develop)](https://coveralls.io/github/dedis/student_17_collections?branch=develop)
 
 ## Overview
 
