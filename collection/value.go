@@ -51,69 +51,116 @@ type Value interface {
 
 // Data
 
+/*
+    Data is a Value struct that can be used to store raw `[]byte` data along
+    with each element of the collection (thus rendering it a key/value store).
+    Data values are only stored in non-placeholder leaves, and don't propagate
+    to parents. Therefore, Data values cannot be queried (an error will always
+    be returned when calling `Navigate`).
+*/
 type Data struct {
 }
 
 // Interface
 
+/*
+    Placeholder returns an empty value (placeholder leaves don't need to store
+    any raw data).
+*/
 func (this Data) Placeholder() []byte {
     return []byte{}
 }
 
+/*
+    Parent returns an empty value (raw data is not propagated to interior
+    nodes).
+*/
 func (this Data) Parent(left []byte, right []byte) []byte {
     return []byte{}
 }
 
+/*
+    Navigate will always return an error (raw data cannot be navigated, as it
+    is not propagated to interior nodes).
+*/
 func (this Data) Navigate(query []byte, parent []byte, left []byte, right []byte) (bool, error) {
     return false, errors.New("Data: data values cannot be navigated.")
 }
 
 // Stake64
 
+/*
+    Stake64 is a Value struct that can be used to associate to each element of
+    a collection an amount of stake. Placeholder leaves have zero stake, and
+    the stake of each internal node is given by the sum of the stakes of its
+    children.
+
+    This allows navigation by inversion of the cumulative stake: a query value
+    uniformly distributed between 0 and the total stake on the tree (namely, the
+    stake of the root) will yield an element of the collection with probability
+    proportional to its stake.
+*/
 type Stake64 struct {
 }
 
 // Methods
 
+/*
+    Encode takes an `uint64` amount of stake and returns a `[]byte` value that
+    can be stored on a node of the collection.
+*/
 func (this Stake64) Encode(stake uint64) []byte {
     value := make([]byte, 8)
     binary.BigEndian.PutUint64(value, stake)
     return value
 }
 
+/*
+    Decode takes a `[]byte` value (e.g., stored by a node of the collection) and
+    returns the `uint64` amount of stake that it encodes.
+*/
 func (this Stake64) Decode(value []byte) uint64 {
     return binary.BigEndian.Uint64(value)
 }
 
 // Interface
 
+/*
+    Placeholder returns an encoded zero-stake value (placeholder leaves always
+    have zero stake).
+*/
 func (this Stake64) Placeholder() []byte {
-    return make([]byte, 8)
+    return this.Encode(0)
 }
 
+/*
+    Parent returns a value encoding a stake equal to the sum of the stakes
+    encoded by the children leaves (the stake on each node represents the total
+    amount of stake under it; this allows cumulative inversion navigation).
+*/
 func (this Stake64) Parent(left []byte, right []byte) []byte {
-    leftstake := binary.BigEndian.Uint64(left)
-    rightstake := binary.BigEndian.Uint64(right)
-
-    parentstake := leftstake + rightstake
-    parent := make([]byte, 8)
-    binary.BigEndian.PutUint64(parent, parentstake)
-
-    return parent
+    return this.Encode(this.Decode(left) + this.Decode(right))
 }
 
+/*
+    Navigate implements cumulative inversion stake navigation: if the query
+    stake is greater or equal to the parent stake, it yields an error.
+    Otherwise, it navigates left (returns `false`) if the query stake is smaller
+    than the left stake, and right (returns `true`) otherwise. When navigating
+    right, the query stake is decreased by the left stake.
+*/
 func (this Stake64) Navigate(query []byte, parent []byte, left []byte, right []byte) (bool, error) {
-    querystake := binary.BigEndian.Uint64(query)
-    parentstake := binary.BigEndian.Uint64(parent)
+    querystake := this.Decode(query)
+    parentstake := this.Decode(parent)
 
     if querystake >= parentstake {
         return false, errors.New("Stake64: query stake exceeds parent stake.")
     }
 
-    leftstake := binary.BigEndian.Uint64(left)
+    leftstake := this.Decode(left)
 
     if querystake >= leftstake {
-        binary.BigEndian.PutUint64(query, querystake - leftstake)
+        copy(query, this.Encode(querystake - leftstake))
         return true, nil
     } else {
         return false, nil
