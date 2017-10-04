@@ -2,35 +2,51 @@ package collection
 
 import csha256 "crypto/sha256"
 
-// Mask
+// mask
 
-type Mask struct {
-    Value []byte
-    Bits int
+type mask struct {
+    value []byte
+    bits int
+}
+
+// Private methods
+
+func (this *mask) match(buffer [csha256.Size]byte) bool {
+    return match(buffer[:], this.value[:], this.bits)
+}
+
+// scope
+
+type scope struct {
+    masks []mask
+    all bool
 }
 
 // Methods
 
-func (mask Mask) match(buffer [csha256.Size]byte) bool {
-    return match(buffer[:], mask.Value[:], mask.Bits)
+func (this *scope) All() {
+    this.all = true
+    this.masks = []mask{}
 }
 
-// Scope
-
-type Scope struct {
-    Masks []Mask
-    Default bool
+func (this *scope) None() {
+    this.all = false
+    this.masks = []mask{}
 }
 
-// Methods
+func (this *scope) Add(value []byte, bits int) {
+    this.masks = append(this.masks, mask{value, bits})
+}
 
-func (scope Scope) match(buffer [csha256.Size]byte) bool {
-    if len(scope.Masks) == 0 {
-        return scope.Default
+// Private methods
+
+func (this *scope) match(buffer [csha256.Size]byte) bool {
+    if len(this.masks) == 0 {
+        return this.all
     }
 
-    for index := 0; index < len(scope.Masks); index++ {
-        if scope.Masks[index].match(buffer) {
+    for index := 0; index < len(this.masks); index++ {
+        if this.masks[index].match(buffer) {
             return true
         }
     }

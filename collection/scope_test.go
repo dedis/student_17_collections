@@ -31,7 +31,7 @@ func TestMaskMatch(test *testing.T) {
 
     for _, round := range(rounds) {
         maskvalue, _ := hex.DecodeString(round.mask)
-        mask := Mask{maskvalue, round.bits}
+        mask := mask{maskvalue, round.bits}
 
         bufferslice, _ := hex.DecodeString(round.buffer)
         var buffer [csha256.Size]byte
@@ -46,8 +46,55 @@ func TestMaskMatch(test *testing.T) {
     }
 }
 
+func TestScopeMethods(test *testing.T) {
+    scope := scope{}
+
+    bufferslice, _ := hex.DecodeString("1234567890")
+    scope.Add(bufferslice, 3)
+
+    if len(scope.masks) != 1 {
+        test.Error("[add]", "Add does not add to masks.")
+    }
+
+    if !match(scope.masks[0].value, bufferslice, 24) || scope.masks[0].bits != 3 {
+        test.Error("[add]", "Add adds wrong mask.")
+    }
+
+    bufferslice, _ = hex.DecodeString("0987654321")
+    scope.Add(bufferslice, 40)
+
+    if len(scope.masks) != 2 {
+        test.Error("[add]", "Add does not add to masks.")
+    }
+
+    if !match(scope.masks[1].value, bufferslice, 40) || scope.masks[1].bits != 40 {
+        test.Error("[add]", "Add adds wrong mask.")
+    }
+
+    scope.All()
+
+    if len(scope.masks) != 0 {
+        test.Error("[all]", "All does not wipe masks.")
+    }
+
+    if !(scope.all) {
+        test.Error("[all]", "All does not properly set the all flag.")
+    }
+
+    scope.Add(bufferslice, 40)
+    scope.None()
+
+    if len(scope.masks) != 0 {
+        test.Error("[none]", "None does not wipe masks.")
+    }
+
+    if scope.all {
+        test.Error("[none]", "None does not properly set the all flag.")
+    }
+}
+
 func TestScopeMatch(test *testing.T) {
-    scope := Scope{}
+    scope := scope{}
 
     bufferslice, _ := hex.DecodeString("85f46bd1ba18d1014b1179edd451ece95296e4a8c765ba8bba86c16893906398")
     var buffer [csha256.Size]byte
@@ -56,31 +103,31 @@ func TestScopeMatch(test *testing.T) {
         buffer[index] = bufferslice[index]
     }
 
-    scope.Default = false
+    scope.None()
     if scope.match(buffer) {
-        test.Error("[default]", "No-mask match succeeds with false default.")
+        test.Error("[all]", "No-mask match succeeds after None().")
     }
 
-    scope.Default = true
+    scope.All()
     if !(scope.match(buffer)) {
-        test.Error("[default]", "No-mask match fails with true default.")
+        test.Error("[all]", "No-mask match fails after All().")
     }
 
     nomatch, _ := hex.DecodeString("fa91")
-    scope.Masks = append(scope.Masks, Mask{nomatch, 16})
+    scope.Add(nomatch, 16)
 
     if scope.match(buffer) {
         test.Error("[match]", "Scope match succeeds on a non-matching mask.")
     }
 
     maybematch, _ := hex.DecodeString("86")
-    scope.Masks = append(scope.Masks, Mask{maybematch, 8})
+    scope.Add(maybematch, 8)
 
     if scope.match(buffer) {
         test.Error("[match]", "Scope match succeeds on a non-matching mask.")
     }
 
-    scope.Masks = append(scope.Masks, Mask{maybematch, 6})
+    scope.Add(maybematch, 6)
 
     if !(scope.match(buffer)) {
         test.Error("[match]", "Scope match fails on matching mask.")

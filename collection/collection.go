@@ -38,7 +38,7 @@ func EmptyCollection(values... Value) (collection collection) {
     return
 }
 
-// Methods
+// Private methods
 
 func (this *collection) update(node *node) error {
     if !(node.known) {
