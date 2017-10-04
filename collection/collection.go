@@ -5,11 +5,14 @@ import "errors"
 type collection struct {
     root *node
     values []Value
+    Scope scope
 }
 
 // Constructors
 
 func EmptyCollection(values... Value) (collection collection) {
+    collection.Scope.All()
+    
     collection.root = new(node)
     collection.root.children.left = new(node)
     collection.root.children.right = new(node)
