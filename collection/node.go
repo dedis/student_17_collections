@@ -6,6 +6,7 @@ type node struct {
     label [csha256.Size]byte
 
     known bool
+    inconsistent bool
 
     key []byte
     values [][]byte

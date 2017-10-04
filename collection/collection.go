@@ -6,6 +6,9 @@ type collection struct {
     root *node
     values []Value
     Scope scope
+
+    transaction bool
+    temporary []*node
 }
 
 // Constructors
@@ -56,6 +59,16 @@ func (this *collection) Apply(update update) error {
     panic("Wrong update kind value.")
 }
 
+func (this *collection) Begin() {
+    this.transaction = true
+}
+
+func (this *collection) End() {
+    this.fix(this.root)
+    this.collect()
+    this.transaction = false
+}
+
 // Private methods
 
 func (this *collection) update(node *node) error {
@@ -80,6 +93,36 @@ func (this *collection) update(node *node) error {
     }
 
     return nil
+}
+
+func (this *collection) fix(node *node) {
+    if node.inconsistent {
+        if node.leaf() {
+            this.update(node)
+        } else {
+            this.fix(node.children.left)
+            this.fix(node.children.right)
+            this.update(node)
+        }
+
+        node.inconsistent = false
+    }
+}
+
+func (this *collection) collect() {
+    for index := 0; index < len(this.temporary); index++ {
+        this.temporary[index].known = false
+
+        this.temporary[index].key = []byte{}
+        this.temporary[index].values = [][]byte{}
+
+        this.temporary[index].children.left = nil
+        this.temporary[index].children.right = nil
+
+        this.temporary[index] = nil
+    }
+
+    this.temporary = this.temporary[:0]
 }
 
 func (this *collection) applyadd(key []byte, values [][]byte) error {
