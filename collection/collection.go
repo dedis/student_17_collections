@@ -12,7 +12,7 @@ type collection struct {
 
 func EmptyCollection(values... Value) (collection collection) {
     collection.Scope.All()
-    
+
     collection.root = new(node)
     collection.root.children.left = new(node)
     collection.root.children.right = new(node)
@@ -41,6 +41,21 @@ func EmptyCollection(values... Value) (collection collection) {
     return
 }
 
+// Methods
+
+func (this *collection) Apply(update update) error {
+    switch update.kind {
+    case add:
+        return this.applyadd(update.key, update.values) // TODO: use proofs if available
+    case remove:
+        return this.applyremove(update.key) // TODO: use proofs if available
+    case set:
+        return this.applyset(update.key, update.values) // TODO: use proofs if available
+    }
+
+    panic("Wrong update kind value.")
+}
+
 // Private methods
 
 func (this *collection) update(node *node) error {
@@ -65,4 +80,16 @@ func (this *collection) update(node *node) error {
     }
 
     return nil
+}
+
+func (this *collection) applyadd(key []byte, values [][]byte) error {
+    return errors.New("Not implemented.")
+}
+
+func (this *collection) applyremove(key []byte) error {
+    return errors.New("Not implemented.")
+}
+
+func (this *collection) applyset(key []byte, values [][]byte) error {
+    return errors.New("Not implemented.")
 }
