@@ -196,6 +196,71 @@ func TestEnd(test *testing.T) {
     }
 }
 
+func TestGet(test *testing.T) {
+    stake64 := Stake64{}
+    collection := EmptyCollection(stake64)
+
+    collection.Apply(AddUpdate([]byte("firstkey"), [][]byte{stake64.Encode(0)}))
+    collection.Apply(AddUpdate([]byte("secondkey"), [][]byte{stake64.Encode(1)}))
+    collection.Apply(AddUpdate([]byte("thirdkey"), [][]byte{stake64.Encode(2)}))
+    collection.Apply(AddUpdate([]byte("fourthkey"), [][]byte{stake64.Encode(3)}))
+
+    for stake, key := range([]string{"firstkey", "secondkey", "thirdkey", "fourthkey"}) {
+        record, error := collection.Get([]byte(key))
+
+        if error != nil {
+            test.Error("[get]", "Get yields error on known tree.")
+        }
+
+        if !(record.Exists()) {
+            test.Error("[get]", "Get yields non-existing record on existing key.")
+        }
+
+        if len(record.Values()) != 1 {
+            test.Error("[values]", "Get does not yield values on a valued collection.")
+        }
+
+        if stake64.Decode(record.Values()[0]) != uint64(stake) {
+            test.Error("[values]", "Get does not yield correct values.")
+        }
+    }
+
+    for _, key := range([]string{"fifthkey", "sixthkey", "seventhkey", "eighthkey"}) {
+        record, error := collection.Get([]byte(key))
+
+        if error != nil {
+            test.Error("[get]", "Get yields an error when searching for a non-existing key.")
+        }
+
+        if record.Exists() {
+            test.Error("[get]", "Get yields an existing record when searching for a non-existing key.")
+        }
+    }
+
+    unknown := EmptyCollection()
+    unknown.Scope.None()
+
+    unknown.Begin()
+
+    for index := uint64(0); index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, index)
+
+        unknown.Apply(AddUpdate(key, [][]byte{}))
+    }
+
+    unknown.End()
+
+    key := make([]byte, 8)
+    binary.BigEndian.PutUint64(key, 17)
+
+    _, error := unknown.Get(key)
+
+    if error == nil {
+        test.Error("[unknown]", "Get does not yield an error when queried on unknown values.")
+    }
+}
+
 func TestPlaceholderValues(test *testing.T) {
     data := Data{}
     stake64 := Stake64{}

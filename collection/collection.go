@@ -64,6 +64,35 @@ func (this *collection) End() {
     this.transaction = false
 }
 
+func (this *collection) Get(key []byte) (record, error) {
+    path := sha256(key)
+
+    depth := 0
+    cursor := this.root
+
+    for {
+        if !(cursor.known) {
+            return record{}, errors.New("Record lies in an unknown subtree.")
+        }
+
+        if cursor.leaf() {
+            if (len(key) == len(cursor.key)) && match(key, cursor.key, 8 * len(key)) {
+                return record{this, cursor.key, cursor.values}, nil
+            } else {
+                return record{this, []byte{}, [][]byte{}}, nil
+            }
+        } else {
+            if bit(path[:], depth) {
+                cursor = cursor.children.right
+            } else {
+                cursor = cursor.children.left
+            }
+
+            depth++
+        }
+    }
+}
+
 // Private methods
 
 func (this *collection) placeholdervalues() [][]byte {
