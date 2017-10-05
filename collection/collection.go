@@ -29,13 +29,8 @@ func EmptyCollection(values... Value) (collection collection) {
 
     collection.values = values
 
-    collection.root.children.left.values = make([][]byte, len(collection.values))
-    collection.root.children.right.values = make([][]byte, len(collection.values))
-
-    for index := 0; index < len(collection.values); index++ {
-        collection.root.children.left.values[index] = collection.values[index].Placeholder()
-        collection.root.children.right.values[index] = collection.values[index].Placeholder()
-    }
+    collection.root.children.left.values = collection.placeholdervalues()
+    collection.root.children.right.values = collection.placeholdervalues()
 
     collection.update(collection.root.children.left)
     collection.update(collection.root.children.right)
@@ -70,6 +65,16 @@ func (this *collection) End() {
 }
 
 // Private methods
+
+func (this *collection) placeholdervalues() [][]byte {
+    values := make([][]byte, len(this.values))
+
+    for index := 0; index < len(this.values); index++ {
+        values[index] = this.values[index].Placeholder()
+    }
+
+    return values
+}
 
 func (this *collection) update(node *node) error {
     if !(node.known) {
@@ -126,7 +131,91 @@ func (this *collection) collect() {
 }
 
 func (this *collection) applyadd(key []byte, values [][]byte) error {
-    return errors.New("Not implemented.")
+    path := sha256(key)
+    store := this.Scope.match(path)
+
+    depth := 0
+    cursor := this.root
+
+    if !(cursor.known) {
+        return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
+    }
+
+    for {
+        step := bit(path[:], depth)
+
+        if !(cursor.children.left.known) || !(cursor.children.right.known) {
+            return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
+        }
+
+        if step {
+            cursor = cursor.children.right
+        } else {
+            cursor = cursor.children.left
+        }
+
+        depth++
+
+        if cursor.placeholder() {
+            cursor.key = key
+            cursor.values = values
+            this.update(cursor)
+
+            break
+        } else if cursor.leaf() {
+            if (len(key) == len(cursor.key)) && match(key, cursor.key, 8 * len(key)) {
+                return errors.New("Key collision.")
+            }
+
+            collision := *cursor
+            collisionpath := sha256(collision.key)
+            collisionstep := bit(collisionpath[:], depth)
+
+            cursor.key = []byte{}
+            cursor.children.left = new(node)
+            cursor.children.right = new(node)
+
+            cursor.children.left.known = true
+            cursor.children.right.known = true
+
+            cursor.children.left.parent = cursor
+            cursor.children.right.parent = cursor
+
+            if collisionstep {
+                cursor.children.right.key = collision.key
+                cursor.children.right.values = collision.values
+                cursor.children.left.values = this.placeholdervalues()
+            } else {
+                cursor.children.left.key = collision.key
+                cursor.children.left.values = collision.values
+                cursor.children.right.values = this.placeholdervalues()
+            }
+
+            if !store {
+                this.temporary = append(this.temporary, cursor.children.left, cursor.children.right)
+            }
+        }
+    }
+
+    for {
+        if cursor.parent == nil {
+            break
+        }
+
+        cursor = cursor.parent
+
+        if this.transaction {
+            cursor.inconsistent = true
+        } else {
+            this.update(cursor)
+        }
+    }
+
+    if !(this.transaction) {
+        this.collect()
+    }
+
+    return nil
 }
 
 func (this *collection) applyremove(key []byte) error {
