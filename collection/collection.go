@@ -182,13 +182,19 @@ func (this *collection) applyadd(key []byte, values [][]byte) error {
             cursor.children.right.parent = cursor
 
             if collisionstep {
+                cursor.children.right.label = collision.label
                 cursor.children.right.key = collision.key
                 cursor.children.right.values = collision.values
+
                 cursor.children.left.values = this.placeholdervalues()
+                this.update(cursor.children.left)
             } else {
+                cursor.children.left.label = collision.label
                 cursor.children.left.key = collision.key
                 cursor.children.left.values = collision.values
+
                 cursor.children.right.values = this.placeholdervalues()
+                this.update(cursor.children.right)
             }
 
             if !store {
