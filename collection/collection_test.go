@@ -382,4 +382,29 @@ func TestApplyAdd(test *testing.T) {
             return
         }
     }
+
+    unknownroot := EmptyCollection()
+    unknownroot.root.known = false
+
+    error := unknownroot.Apply(AddUpdate([]byte("key"), [][]byte{}))
+    if error == nil {
+        test.Error("[unknownroot]", "Add should yield an error on a collection with unknown root.")
+    }
+
+    unknownrootchildren := EmptyCollection()
+    unknownrootchildren.root.children.left.known = false
+    unknownrootchildren.root.children.right.known = false
+
+    error = unknownrootchildren.Apply(AddUpdate([]byte("key"), [][]byte{}))
+    if error == nil {
+        test.Error("[unknownrootchildren]", "Add should yield an error on a collection with unknown root children.")
+    }
+
+    keycollision := EmptyCollection()
+    keycollision.Apply(AddUpdate([]byte("key"), [][]byte{}))
+
+    error = keycollision.Apply(AddUpdate([]byte("key"), [][]byte{}))
+    if error == nil {
+        test.Error("[keycollision]", "Add should yield an error on key collision.")
+    }
 }
