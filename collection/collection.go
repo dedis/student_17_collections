@@ -2,6 +2,21 @@ package collection
 
 import "errors"
 
+// getter
+
+type getter struct {
+    collection *collection
+    key []byte
+}
+
+// Methods
+
+func (this getter) Record() (record, error) {
+    return this.collection.getrecord(this.key)
+}
+
+// collection
+
 type collection struct {
     root *node
     values []Value
@@ -64,7 +79,13 @@ func (this *collection) End() {
     this.transaction = false
 }
 
-func (this *collection) Get(key []byte) (record, error) {
+func (this *collection) Get(key []byte) getter {
+    return getter{this, key}
+}
+
+// Private methods
+
+func (this *collection) getrecord(key []byte) (record, error) {
     path := sha256(key)
 
     depth := 0
@@ -92,8 +113,6 @@ func (this *collection) Get(key []byte) (record, error) {
         }
     }
 }
-
-// Private methods
 
 func (this *collection) placeholdervalues() [][]byte {
     values := make([][]byte, len(this.values))

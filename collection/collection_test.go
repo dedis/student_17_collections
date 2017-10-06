@@ -196,7 +196,7 @@ func TestEnd(test *testing.T) {
     }
 }
 
-func TestGet(test *testing.T) {
+func TestGetRecord(test *testing.T) {
     stake64 := Stake64{}
     collection := EmptyCollection(stake64)
 
@@ -206,7 +206,7 @@ func TestGet(test *testing.T) {
     collection.Apply(AddUpdate([]byte("fourthkey"), [][]byte{stake64.Encode(3)}))
 
     for stake, key := range([]string{"firstkey", "secondkey", "thirdkey", "fourthkey"}) {
-        record, error := collection.Get([]byte(key))
+        record, error := collection.Get([]byte(key)).Record()
 
         if error != nil {
             test.Error("[get]", "Get yields error on known tree.")
@@ -226,7 +226,7 @@ func TestGet(test *testing.T) {
     }
 
     for _, key := range([]string{"fifthkey", "sixthkey", "seventhkey", "eighthkey"}) {
-        record, error := collection.Get([]byte(key))
+        record, error := collection.Get([]byte(key)).Record()
 
         if error != nil {
             test.Error("[get]", "Get yields an error when searching for a non-existing key.")
@@ -254,7 +254,7 @@ func TestGet(test *testing.T) {
     key := make([]byte, 8)
     binary.BigEndian.PutUint64(key, 17)
 
-    _, error := unknown.Get(key)
+    _, error := unknown.Get(key).Record()
 
     if error == nil {
         test.Error("[unknown]", "Get does not yield an error when queried on unknown values.")
