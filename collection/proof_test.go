@@ -54,4 +54,14 @@ func TestProofGetters(test *testing.T) {
     if proof.Match() {
         test.Error("[match]", "Match is true on non-matching proof.")
     }
+
+    proof.steps = []step{}
+
+    if len(proof.Values()) != 0 {
+        test.Error("[values]", "Values returns values on empty proof.")
+    }
+
+    if proof.Match() {
+        test.Error("[match]", "Match is true on empty proof.")
+    }
 }
