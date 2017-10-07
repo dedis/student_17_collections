@@ -138,7 +138,32 @@ func (this *collection) getproof(key []byte) (proof, error) {
             return proof, errors.New("Record lies in unknown subtree.")
         }
 
-        proof.steps = append(proof.steps, step{dump{cursor.children.left.label, cursor.children.left.leaf(), cursor.children.left.key, cursor.children.left.values}, dump{cursor.children.right.label, cursor.children.right.leaf(), cursor.children.right.key, cursor.children.right.values}})
+        var left dump
+        var right dump
+
+        left.leaf = cursor.children.left.leaf()
+        left.label = cursor.children.left.label
+        left.values = cursor.children.left.values
+
+        right.leaf = cursor.children.right.leaf()
+        right.label = cursor.children.right.label
+        right.values = cursor.children.right.values
+
+        if left.leaf {
+            left.key = cursor.children.left.key
+        } else {
+            left.children.left = cursor.children.left.children.left.label
+            left.children.right = cursor.children.left.children.right.label
+        }
+
+        if right.leaf {
+            right.key = cursor.children.right.key
+        } else {
+            right.children.left = cursor.children.right.children.left.label
+            right.children.right = cursor.children.right.children.right.label
+        }
+
+        proof.steps = append(proof.steps, step{left, right})
 
         if bit(path[:], depth) {
             cursor = cursor.children.right

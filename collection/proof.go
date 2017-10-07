@@ -8,6 +8,11 @@ type dump struct {
 
     key []byte
     values [][]byte
+
+    children struct {
+        left [csha256.Size]byte
+        right [csha256.Size]byte
+    }
 }
 
 type step struct {
