@@ -15,6 +15,10 @@ func (this getter) Record() (record, error) {
     return this.collection.getrecord(this.key)
 }
 
+func (this getter) Proof() (proof, error) {
+    return this.collection.getproof(this.key)
+}
+
 // collection
 
 type collection struct {
@@ -112,6 +116,44 @@ func (this *collection) getrecord(key []byte) (record, error) {
             depth++
         }
     }
+}
+
+func (this *collection) getproof(key []byte) (proof, error) {
+    var proof proof
+
+    proof.root = this.root.label
+    proof.key = key
+
+    path := sha256(key)
+
+    depth := 0
+    cursor := this.root
+
+    if !(cursor.known) {
+        return proof, errors.New("Record lies in unknown subtree.")
+    }
+
+    for {
+        if !(cursor.children.left.known) || !(cursor.children.right.known) {
+            return proof, errors.New("Record lies in unknown subtree.")
+        }
+
+        proof.steps = append(proof.steps, step{dump{cursor.children.left.label, cursor.children.left.leaf(), cursor.children.left.key, cursor.children.left.values}, dump{cursor.children.right.label, cursor.children.right.leaf(), cursor.children.right.key, cursor.children.right.values}})
+
+        if bit(path[:], depth) {
+            cursor = cursor.children.right
+        } else {
+            cursor = cursor.children.left
+        }
+
+        depth++
+
+        if cursor.leaf() {
+            break
+        }
+    }
+
+    return proof, nil
 }
 
 func (this *collection) placeholdervalues() [][]byte {

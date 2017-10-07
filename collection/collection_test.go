@@ -261,6 +261,81 @@ func TestGetRecord(test *testing.T) {
     }
 }
 
+func TestGetProof(test *testing.T) {
+    stake64 := Stake64{}
+    collection := EmptyCollection(stake64)
+
+    collection.Apply(AddUpdate([]byte("firstkey"), [][]byte{stake64.Encode(0)}))
+    collection.Apply(AddUpdate([]byte("secondkey"), [][]byte{stake64.Encode(1)}))
+    collection.Apply(AddUpdate([]byte("thirdkey"), [][]byte{stake64.Encode(2)}))
+    collection.Apply(AddUpdate([]byte("fourthkey"), [][]byte{stake64.Encode(3)}))
+
+    for stake, key := range([]string{"firstkey", "secondkey", "thirdkey", "fourthkey"}) {
+        proof, error := collection.Get([]byte(key)).Proof()
+
+        if error != nil {
+            test.Error("[proof]", "Proof yields an error when getting a known value.")
+        }
+
+        if !(proof.Match()) {
+            test.Error("[match]", "Match not found on existing value.")
+        }
+
+        if (len(proof.Key()) != len([]byte(key))) || !match(proof.Key(), []byte(key), len(key)) {
+            test.Error("[key]", "Proof returns wrong query key.")
+        }
+
+        if stake64.Decode(proof.Values()[0]) != uint64(stake) {
+            test.Error("[value]", "Proof returns wrong value.")
+        }
+    }
+
+    key := []byte("fifthkey")
+    proof, error := collection.Get([]byte("fifthkey")).Proof()
+
+    if error != nil {
+        test.Error("[proof]", "Proof yields an error when getting a known value.")
+    }
+
+    if proof.Match() {
+        test.Error("[match]", "Match found on non-existing value.")
+    }
+
+    if (len(proof.Key()) != len(key)) || !match(proof.Key(), key, len(key)) {
+        test.Error("[key]", "Proof returns wrong query key.")
+    }
+
+    unknown := EmptyCollection()
+    unknown.Scope.None()
+
+    unknown.Begin()
+
+    for index := uint64(0); index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, index)
+
+        unknown.Apply(AddUpdate(key, [][]byte{}))
+    }
+
+    unknown.End()
+
+    key = make([]byte, 8)
+    binary.BigEndian.PutUint64(key, 17)
+
+    _, error = unknown.Get(key).Proof()
+
+    if error == nil {
+        test.Error("[unknown]", "Get does not yield an error when queried on unknown values.")
+    }
+
+    unknown.root.known = false
+    _, error = unknown.Get(key).Proof()
+
+    if error == nil {
+        test.Error("[unknown]", "Get does not yield an error when queried on unknown values.")
+    }
+}
+
 func TestPlaceholderValues(test *testing.T) {
     data := Data{}
     stake64 := Stake64{}
