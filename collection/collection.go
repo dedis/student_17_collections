@@ -168,43 +168,36 @@ func (this *collection) Add(key []byte, values [][]byte) error {
     return nil
 }
 
-func (this *collection) Verify(proof Proof) bool {
-    if this.root.inconsistent {
-        panic("Verify called on inconsistent tree.")
+func (this *collection) Verify(target interface{}) bool {
+    switch value := target.(type) {
+    case Proof:
+        return this.verifyproof(value)
+    case Update:
+        return value.Valid() && value.Verify(this.verifyproof)
+    default:
+        panic("Verify accepts only targets of type Proof or Update.")
+    }
+}
+
+func (this *collection) Apply(update Update) bool {
+    get := func(key []byte) (record, error) {
+        return this.Get(key).Record()
     }
 
-    path := sha256(proof.key)
+    if update.Applicable(get) {
+        set := func([]byte, [][]byte) error { // TODO: Substitute with this.Set when implemented
+            return errors.New("Not implemented.")
+        }
 
-    depth := 0
-    cursor := this.root
+        remove := func([]byte) error { // TODO: Substitute with this.Remove when implemented
+            return errors.New("Not implemented.")
+        }
 
-    if !(cursor.known) {
+        update.Apply(get, this.Add, set, remove)
+        return true
+    } else {
         return false
     }
-
-    for {
-        if depth >= len(proof.steps) {
-            return false
-        }
-
-        if !(this.match(cursor.children.left, &(proof.steps[depth].left))) || !(this.match(cursor.children.right, &(proof.steps[depth].right))) {
-            return false
-        }
-
-        if bit(path[:], depth) {
-            cursor = cursor.children.right
-        } else {
-            cursor = cursor.children.left
-        }
-
-        depth++
-
-        if cursor.leaf() {
-            break
-        }
-    }
-
-    return true
 }
 
 // Private methods
@@ -299,6 +292,45 @@ func (this *collection) getproof(key []byte) (Proof, error) {
     }
 
     return proof, nil
+}
+
+func (this *collection) verifyproof(proof Proof) bool {
+    if this.root.inconsistent {
+        panic("Verify called on inconsistent tree.")
+    }
+
+    path := sha256(proof.key)
+
+    depth := 0
+    cursor := this.root
+
+    if !(cursor.known) {
+        return false
+    }
+
+    for {
+        if depth >= len(proof.steps) {
+            return false
+        }
+
+        if !(this.match(cursor.children.left, &(proof.steps[depth].left))) || !(this.match(cursor.children.right, &(proof.steps[depth].right))) {
+            return false
+        }
+
+        if bit(path[:], depth) {
+            cursor = cursor.children.right
+        } else {
+            cursor = cursor.children.left
+        }
+
+        depth++
+
+        if cursor.leaf() {
+            break
+        }
+    }
+
+    return true
 }
 
 func (this *collection) placeholdervalues() [][]byte {
