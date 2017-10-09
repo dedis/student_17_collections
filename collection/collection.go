@@ -60,19 +60,6 @@ func EmptyCollection(values... Value) (collection collection) {
 
 // Methods
 
-func (this *collection) Apply(update update) error {
-    switch update.kind {
-    case add:
-        return this.applyadd(update.key, update.values) // TODO: use proofs if available
-    case remove:
-        return this.applyremove(update.key) // TODO: use proofs if available
-    case set:
-        return this.applyset(update.key, update.values) // TODO: use proofs if available
-    }
-
-    panic("Wrong update kind value.")
-}
-
 func (this *collection) Begin() {
     this.transaction = true
 }
@@ -85,6 +72,100 @@ func (this *collection) End() {
 
 func (this *collection) Get(key []byte) getter {
     return getter{this, key}
+}
+
+func (this *collection) Add(key []byte, values [][]byte) error {
+    path := sha256(key)
+    store := this.Scope.match(path)
+
+    depth := 0
+    cursor := this.root
+
+    if !(cursor.known) {
+        return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
+    }
+
+    for {
+        step := bit(path[:], depth)
+
+        if !(cursor.children.left.known) || !(cursor.children.right.known) {
+            return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
+        }
+
+        if step {
+            cursor = cursor.children.right
+        } else {
+            cursor = cursor.children.left
+        }
+
+        depth++
+
+        if cursor.placeholder() {
+            cursor.key = key
+            cursor.values = values
+            this.update(cursor)
+
+            break
+        } else if cursor.leaf() {
+            if (len(key) == len(cursor.key)) && match(key, cursor.key, 8 * len(key)) {
+                return errors.New("Key collision.")
+            }
+
+            collision := *cursor
+            collisionpath := sha256(collision.key)
+            collisionstep := bit(collisionpath[:], depth)
+
+            cursor.key = []byte{}
+            cursor.children.left = new(node)
+            cursor.children.right = new(node)
+
+            cursor.children.left.known = true
+            cursor.children.right.known = true
+
+            cursor.children.left.parent = cursor
+            cursor.children.right.parent = cursor
+
+            if collisionstep {
+                cursor.children.right.label = collision.label
+                cursor.children.right.key = collision.key
+                cursor.children.right.values = collision.values
+
+                cursor.children.left.values = this.placeholdervalues()
+                this.update(cursor.children.left)
+            } else {
+                cursor.children.left.label = collision.label
+                cursor.children.left.key = collision.key
+                cursor.children.left.values = collision.values
+
+                cursor.children.right.values = this.placeholdervalues()
+                this.update(cursor.children.right)
+            }
+
+            if !store {
+                this.temporary = append(this.temporary, cursor.children.left, cursor.children.right)
+            }
+        }
+    }
+
+    for {
+        if cursor.parent == nil {
+            break
+        }
+
+        cursor = cursor.parent
+
+        if this.transaction {
+            cursor.inconsistent = true
+        } else {
+            this.update(cursor)
+        }
+    }
+
+    if !(this.transaction) {
+        this.collect()
+    }
+
+    return nil
 }
 
 func (this *collection) Verify(proof proof) bool {
@@ -262,7 +343,7 @@ func (this *collection) match(reference *node, dump *dump) bool {
     if !(reference.known) {
         this.temporary = append(this.temporary, reference)
         reference.known = true
-        
+
         reference.values = dump.values
 
         if dump.leaf {
@@ -313,106 +394,4 @@ func (this *collection) collect() {
     }
 
     this.temporary = this.temporary[:0]
-}
-
-func (this *collection) applyadd(key []byte, values [][]byte) error {
-    path := sha256(key)
-    store := this.Scope.match(path)
-
-    depth := 0
-    cursor := this.root
-
-    if !(cursor.known) {
-        return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
-    }
-
-    for {
-        step := bit(path[:], depth)
-
-        if !(cursor.children.left.known) || !(cursor.children.right.known) {
-            return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
-        }
-
-        if step {
-            cursor = cursor.children.right
-        } else {
-            cursor = cursor.children.left
-        }
-
-        depth++
-
-        if cursor.placeholder() {
-            cursor.key = key
-            cursor.values = values
-            this.update(cursor)
-
-            break
-        } else if cursor.leaf() {
-            if (len(key) == len(cursor.key)) && match(key, cursor.key, 8 * len(key)) {
-                return errors.New("Key collision.")
-            }
-
-            collision := *cursor
-            collisionpath := sha256(collision.key)
-            collisionstep := bit(collisionpath[:], depth)
-
-            cursor.key = []byte{}
-            cursor.children.left = new(node)
-            cursor.children.right = new(node)
-
-            cursor.children.left.known = true
-            cursor.children.right.known = true
-
-            cursor.children.left.parent = cursor
-            cursor.children.right.parent = cursor
-
-            if collisionstep {
-                cursor.children.right.label = collision.label
-                cursor.children.right.key = collision.key
-                cursor.children.right.values = collision.values
-
-                cursor.children.left.values = this.placeholdervalues()
-                this.update(cursor.children.left)
-            } else {
-                cursor.children.left.label = collision.label
-                cursor.children.left.key = collision.key
-                cursor.children.left.values = collision.values
-
-                cursor.children.right.values = this.placeholdervalues()
-                this.update(cursor.children.right)
-            }
-
-            if !store {
-                this.temporary = append(this.temporary, cursor.children.left, cursor.children.right)
-            }
-        }
-    }
-
-    for {
-        if cursor.parent == nil {
-            break
-        }
-
-        cursor = cursor.parent
-
-        if this.transaction {
-            cursor.inconsistent = true
-        } else {
-            this.update(cursor)
-        }
-    }
-
-    if !(this.transaction) {
-        this.collect()
-    }
-
-    return nil
-}
-
-func (this *collection) applyremove(key []byte) error {
-    return errors.New("Not implemented.")
-}
-
-func (this *collection) applyset(key []byte, values [][]byte) error {
-    return errors.New("Not implemented.")
 }

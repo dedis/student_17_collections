@@ -159,7 +159,7 @@ func TestEnd(test *testing.T) {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, index)
 
-        collection.Apply(AddUpdate(key, [][]byte{}))
+        collection.Add(key, [][]byte{})
     }
 
     collection.End()
@@ -182,7 +182,7 @@ func TestEnd(test *testing.T) {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, index)
 
-        noscope.Apply(AddUpdate(key, [][]byte{}))
+        noscope.Add(key, [][]byte{})
     }
 
     noscope.End()
@@ -196,6 +196,50 @@ func TestEnd(test *testing.T) {
     }
 }
 
+func TestAdd(test *testing.T) {
+    helper := collectiontesthelper{}
+
+    stake64 := Stake64{}
+    collection := EmptyCollection(stake64)
+
+    for index := uint64(0); index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, index)
+
+        collection.Add(key, [][]byte{stake64.Encode(uint64(rand.Uint32()))})
+
+        if !(helper.validatetree(&collection, collection.root, []bool{})) {
+            test.Error("[tree]", "Add produces an invalid tree.")
+            return
+        }
+    }
+
+    unknownroot := EmptyCollection()
+    unknownroot.root.known = false
+
+    error := unknownroot.Add([]byte("key"), [][]byte{})
+    if error == nil {
+        test.Error("[unknownroot]", "Add should yield an error on a collection with unknown root.")
+    }
+
+    unknownrootchildren := EmptyCollection()
+    unknownrootchildren.root.children.left.known = false
+    unknownrootchildren.root.children.right.known = false
+
+    error = unknownrootchildren.Add([]byte("key"), [][]byte{})
+    if error == nil {
+        test.Error("[unknownrootchildren]", "Add should yield an error on a collection with unknown root children.")
+    }
+
+    keycollision := EmptyCollection()
+    keycollision.Add([]byte("key"), [][]byte{})
+
+    error = keycollision.Add([]byte("key"), [][]byte{})
+    if error == nil {
+        test.Error("[keycollision]", "Add should yield an error on key collision.")
+    }
+}
+
 func TestVerify(test *testing.T) {
     stake64 := Stake64{}
     collection := EmptyCollection(stake64)
@@ -203,7 +247,7 @@ func TestVerify(test *testing.T) {
     for stake := 0; stake < 512; stake++ {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(stake))
-        collection.Apply(AddUpdate(key, [][]byte{stake64.Encode(uint64(stake))}))
+        collection.Add(key, [][]byte{stake64.Encode(uint64(stake))})
     }
 
     verifier := EmptyCollection(stake64)
@@ -250,8 +294,8 @@ func TestVerify(test *testing.T) {
         }
     }
 
-    collection.Apply(AddUpdate([]byte("mykey"), [][]byte{stake64.Encode(1024)}))
-    verifier.Apply(AddUpdate([]byte("mykey"), [][]byte{stake64.Encode(1024)}))
+    collection.Add([]byte("mykey"), [][]byte{stake64.Encode(1024)})
+    verifier.Add([]byte("mykey"), [][]byte{stake64.Encode(1024)})
 
     verifier.End()
 
@@ -268,10 +312,10 @@ func TestGetRecord(test *testing.T) {
     stake64 := Stake64{}
     collection := EmptyCollection(stake64)
 
-    collection.Apply(AddUpdate([]byte("firstkey"), [][]byte{stake64.Encode(0)}))
-    collection.Apply(AddUpdate([]byte("secondkey"), [][]byte{stake64.Encode(1)}))
-    collection.Apply(AddUpdate([]byte("thirdkey"), [][]byte{stake64.Encode(2)}))
-    collection.Apply(AddUpdate([]byte("fourthkey"), [][]byte{stake64.Encode(3)}))
+    collection.Add([]byte("firstkey"), [][]byte{stake64.Encode(0)})
+    collection.Add([]byte("secondkey"), [][]byte{stake64.Encode(1)})
+    collection.Add([]byte("thirdkey"), [][]byte{stake64.Encode(2)})
+    collection.Add([]byte("fourthkey"), [][]byte{stake64.Encode(3)})
 
     for stake, key := range([]string{"firstkey", "secondkey", "thirdkey", "fourthkey"}) {
         record, error := collection.Get([]byte(key)).Record()
@@ -314,7 +358,7 @@ func TestGetRecord(test *testing.T) {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, index)
 
-        unknown.Apply(AddUpdate(key, [][]byte{}))
+        unknown.Add(key, [][]byte{})
     }
 
     unknown.End()
@@ -333,10 +377,10 @@ func TestGetProof(test *testing.T) {
     stake64 := Stake64{}
     collection := EmptyCollection(stake64)
 
-    collection.Apply(AddUpdate([]byte("firstkey"), [][]byte{stake64.Encode(0)}))
-    collection.Apply(AddUpdate([]byte("secondkey"), [][]byte{stake64.Encode(1)}))
-    collection.Apply(AddUpdate([]byte("thirdkey"), [][]byte{stake64.Encode(2)}))
-    collection.Apply(AddUpdate([]byte("fourthkey"), [][]byte{stake64.Encode(3)}))
+    collection.Add([]byte("firstkey"), [][]byte{stake64.Encode(0)})
+    collection.Add([]byte("secondkey"), [][]byte{stake64.Encode(1)})
+    collection.Add([]byte("thirdkey"), [][]byte{stake64.Encode(2)})
+    collection.Add([]byte("fourthkey"), [][]byte{stake64.Encode(3)})
 
     for stake, key := range([]string{"firstkey", "secondkey", "thirdkey", "fourthkey"}) {
         proof, error := collection.Get([]byte(key)).Proof()
@@ -382,7 +426,8 @@ func TestGetProof(test *testing.T) {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, index)
 
-        unknown.Apply(AddUpdate(key, [][]byte{}))
+        unknown.Add(key, [][]byte{})
+
     }
 
     unknown.End()
@@ -570,49 +615,5 @@ func TestCollect(test *testing.T) {
 
     if len(collection.temporary) != 0 {
         test.Error("[temporary]", "Collect does not empty temporary nodes list.")
-    }
-}
-
-func TestApplyAdd(test *testing.T) {
-    helper := collectiontesthelper{}
-
-    stake64 := Stake64{}
-    collection := EmptyCollection(stake64)
-
-    for index := uint64(0); index < 512; index++ {
-        key := make([]byte, 8)
-        binary.BigEndian.PutUint64(key, index)
-
-        collection.Apply(AddUpdate(key, [][]byte{stake64.Encode(uint64(rand.Uint32()))}))
-
-        if !(helper.validatetree(&collection, collection.root, []bool{})) {
-            test.Error("[tree]", "Add produces an invalid tree.")
-            return
-        }
-    }
-
-    unknownroot := EmptyCollection()
-    unknownroot.root.known = false
-
-    error := unknownroot.Apply(AddUpdate([]byte("key"), [][]byte{}))
-    if error == nil {
-        test.Error("[unknownroot]", "Add should yield an error on a collection with unknown root.")
-    }
-
-    unknownrootchildren := EmptyCollection()
-    unknownrootchildren.root.children.left.known = false
-    unknownrootchildren.root.children.right.known = false
-
-    error = unknownrootchildren.Apply(AddUpdate([]byte("key"), [][]byte{}))
-    if error == nil {
-        test.Error("[unknownrootchildren]", "Add should yield an error on a collection with unknown root children.")
-    }
-
-    keycollision := EmptyCollection()
-    keycollision.Apply(AddUpdate([]byte("key"), [][]byte{}))
-
-    error = keycollision.Apply(AddUpdate([]byte("key"), [][]byte{}))
-    if error == nil {
-        test.Error("[keycollision]", "Add should yield an error on key collision.")
     }
 }
