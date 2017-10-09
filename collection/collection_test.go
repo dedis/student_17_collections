@@ -196,6 +196,74 @@ func TestEnd(test *testing.T) {
     }
 }
 
+func TestVerify(test *testing.T) {
+    stake64 := Stake64{}
+    collection := EmptyCollection(stake64)
+
+    for stake := 0; stake < 512; stake++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(stake))
+        collection.Apply(AddUpdate(key, [][]byte{stake64.Encode(uint64(stake))}))
+    }
+
+    verifier := EmptyCollection(stake64)
+    verifier.Scope.None()
+
+    verifier.root.label = collection.root.label
+    verifier.root.values = collection.root.values
+
+    verifier.root.children.left.label = collection.root.children.left.label
+    verifier.root.children.left.values = [][]byte{}
+    verifier.root.children.left.known = false
+
+    verifier.root.children.right.label = collection.root.children.right.label
+    verifier.root.children.right.values = [][]byte{}
+    verifier.root.children.right.known = false
+
+    verifier.Begin()
+
+    for stake := 0; stake < 512; stake++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(stake))
+        proof, error := collection.Get(key).Proof()
+
+        if error != nil {
+            test.Error("[get]", "Error while getting proofs out of collection.")
+        }
+
+        if !(verifier.Verify(proof)) {
+            test.Error("[verify]", "Verify fails on valid proof.")
+        }
+    }
+
+    for stake := 0; stake < 512; stake++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(stake))
+        proof, error := verifier.Get(key).Proof()
+
+        if error != nil {
+            test.Error("[match]", "Verifier doesn't learn verified records.")
+        }
+
+        if !(collection.Verify(proof)) {
+            test.Error("[verify]", "Verifier produces wrong proofs on learned records.")
+        }
+    }
+
+    collection.Apply(AddUpdate([]byte("mykey"), [][]byte{stake64.Encode(1024)}))
+    verifier.Apply(AddUpdate([]byte("mykey"), [][]byte{stake64.Encode(1024)}))
+
+    verifier.End()
+
+    if verifier.root.label != collection.root.label {
+        test.Error("[roots]", "Verifier and collection have different roots after applying the same update.")
+    }
+
+    if verifier.root.children.left.known || verifier.root.children.right.known {
+        test.Error("[collect]", "Verifier was not collected after completing transaction.")
+    }
+}
+
 func TestGetRecord(test *testing.T) {
     stake64 := Stake64{}
     collection := EmptyCollection(stake64)

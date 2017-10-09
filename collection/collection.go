@@ -87,6 +87,45 @@ func (this *collection) Get(key []byte) getter {
     return getter{this, key}
 }
 
+func (this *collection) Verify(proof proof) bool {
+    if this.root.inconsistent {
+        panic("Verify called on inconsistent tree.")
+    }
+
+    path := sha256(proof.key)
+
+    depth := 0
+    cursor := this.root
+
+    if !(cursor.known) {
+        return false
+    }
+
+    for {
+        if depth >= len(proof.steps) {
+            return false
+        }
+
+        if !(this.match(cursor.children.left, &(proof.steps[depth].left))) || !(this.match(cursor.children.right, &(proof.steps[depth].right))) {
+            return false
+        }
+
+        if bit(path[:], depth) {
+            cursor = cursor.children.right
+        } else {
+            cursor = cursor.children.left
+        }
+
+        depth++
+
+        if cursor.leaf() {
+            break
+        }
+    }
+
+    return true
+}
+
 // Private methods
 
 func (this *collection) getrecord(key []byte) (record, error) {
@@ -213,6 +252,37 @@ func (this *collection) update(node *node) error {
     }
 
     return nil
+}
+
+func (this *collection) match(reference *node, dump *dump) bool {
+    if (dump.label != reference.label) || !(dump.consistent()) {
+        return false
+    }
+
+    if !(reference.known) {
+        this.temporary = append(this.temporary, reference)
+        reference.known = true
+        
+        reference.values = dump.values
+
+        if dump.leaf {
+            reference.key = dump.key
+        } else {
+            reference.children.left = new(node)
+            reference.children.left.parent = reference
+            reference.children.left.known = false
+            reference.children.left.label = dump.children.left
+
+            reference.children.right = new(node)
+            reference.children.right.parent = reference
+            reference.children.right.known = false
+            reference.children.right.label = dump.children.right
+
+            this.temporary = append(this.temporary, reference.children.left, reference.children.right)
+        }
+    }
+
+    return true
 }
 
 func (this *collection) fix(node *node) {

@@ -2,6 +2,8 @@ package collection
 
 import csha256 "crypto/sha256"
 
+// dump
+
 type dump struct {
     label [csha256.Size]byte
     leaf bool
@@ -15,10 +17,24 @@ type dump struct {
     }
 }
 
+// Private methods
+
+func (this *dump) consistent() bool {
+    if this.leaf {
+        return this.label == sha256(true, this.key[:], this.values)
+    } else {
+        return this.label == sha256(false, this.values, this.children.left[:], this.children.right[:])
+    }
+}
+
+// step
+
 type step struct {
     left dump
     right dump
 }
+
+// proof
 
 type proof struct {
     root [csha256.Size]byte
