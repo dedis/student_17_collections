@@ -15,7 +15,7 @@ func (this getter) Record() (record, error) {
     return this.collection.getrecord(this.key)
 }
 
-func (this getter) Proof() (proof, error) {
+func (this getter) Proof() (Proof, error) {
     return this.collection.getproof(this.key)
 }
 
@@ -82,14 +82,14 @@ func (this *collection) Add(key []byte, values [][]byte) error {
     cursor := this.root
 
     if !(cursor.known) {
-        return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
+        return errors.New("Applying update to unknown subtree. Proof needed.")
     }
 
     for {
         step := bit(path[:], depth)
 
         if !(cursor.children.left.known) || !(cursor.children.right.known) {
-            return errors.New("Applying update to unknown subtree. Proof needed.") // TODO: first check if a proof was provided. If so, and the proof is valid, use that to expand the tree with nodes from the proof, setting them temporary only if the key lies outside the scope of the collection. If the proof is absent or invalid, return this error.
+            return errors.New("Applying update to unknown subtree. Proof needed.")
         }
 
         if step {
@@ -168,7 +168,7 @@ func (this *collection) Add(key []byte, values [][]byte) error {
     return nil
 }
 
-func (this *collection) Verify(proof proof) bool {
+func (this *collection) Verify(proof Proof) bool {
     if this.root.inconsistent {
         panic("Verify called on inconsistent tree.")
     }
@@ -238,8 +238,8 @@ func (this *collection) getrecord(key []byte) (record, error) {
     }
 }
 
-func (this *collection) getproof(key []byte) (proof, error) {
-    var proof proof
+func (this *collection) getproof(key []byte) (Proof, error) {
+    var proof Proof
 
     proof.root = this.root.label
     proof.key = key

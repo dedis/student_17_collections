@@ -34,9 +34,9 @@ type step struct {
     right dump
 }
 
-// proof
+// Proof
 
-type proof struct {
+type Proof struct {
     root [csha256.Size]byte
     key []byte
     steps []step
@@ -44,11 +44,11 @@ type proof struct {
 
 // Getters
 
-func (this *proof) Key() []byte {
+func (this *Proof) Key() []byte {
     return this.key
 }
 
-func (this *proof) Values() [][]byte{
+func (this *Proof) Values() [][]byte{
     if len(this.steps) == 0 {
         return [][]byte{}
     }
@@ -73,7 +73,7 @@ func (this *proof) Values() [][]byte{
 
 // Methods
 
-func (this *proof) Match() bool {
+func (this *Proof) Match() bool {
     if len(this.steps) == 0 {
         return false
     }

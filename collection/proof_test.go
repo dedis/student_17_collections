@@ -15,7 +15,7 @@ func TestProofGetters(test *testing.T) {
 
     steps := []step{{}, {}, {}, {}, {left, right}}
 
-    proof := proof{}
+    proof := Proof{}
     proof.key = key
     proof.steps = steps
 
