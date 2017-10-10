@@ -5,7 +5,7 @@ import csha256 "crypto/sha256"
 import "encoding/hex"
 
 func TestSha256(test *testing.T) {
-    ctx := testctx{"sha256.go", test}
+    ctx := testctx("[sha256.go]", test)
 
     check := func(name string, hexref string, item interface{}, items... interface{}) {
         reference, _ := hex.DecodeString(hexref)

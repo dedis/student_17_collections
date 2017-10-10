@@ -74,7 +74,7 @@ func TestBytesliceMatch(test *testing.T) {
 }
 
 func TestBytesliceDigest(test *testing.T) {
-    ctx := testctx{"[byteslice.go]", test}
+    ctx := testctx("[byteslice.go]", test)
 
     for round := 0; round < 16; round++ {
         slice := make([]byte, csha256.Size)
