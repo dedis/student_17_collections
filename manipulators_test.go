@@ -69,4 +69,12 @@ func TestManipulatorsAdd(test *testing.T) {
     if len(transaction.temporary) < 512 {
         test.Error("[transactioncollection]", "Not enough temporary nodes listed in a collection without scope.")
     }
+
+    ctx.should_panic("[wrongvalues]", func() {
+        collection.Add([]byte("panickey"))
+    })
+
+    ctx.should_panic("[wrongvalues]", func() {
+        keycollision.Add([]byte("panickey"), uint64(13))
+    })
 }
