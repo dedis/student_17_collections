@@ -111,3 +111,17 @@ func (this testctxverifier) treerecursion(prefix string, collection *collection,
 func (this testctxverifier) tree(prefix string, collection *collection) {
     this.treerecursion(prefix, collection, collection.root, []bool{})
 }
+
+func (this testctxverifier) keyrecursion(key []byte, node *node) bool {
+    if node.leaf() {
+        return equal(node.key, key)
+    } else {
+        return (this.keyrecursion(key, node.children.left)) || (this.keyrecursion(key, node.children.right))
+    }
+}
+
+func (this testctxverifier) key(prefix string, collection *collection, key []byte) {
+    if !(this.keyrecursion(key, collection.root)) {
+        this.test.Error(this.file, prefix, "Node not found.")
+    }
+}
