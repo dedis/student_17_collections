@@ -143,6 +143,7 @@ func TestManipulatorsSet(test *testing.T) {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(index))
         transaction.Set(key, uint64(2 * index))
+        transaction.Set(key, Same{})
     }
 
     for index := 0; index < 512; index++ {
