@@ -2,6 +2,9 @@ package collection
 
 import "errors"
 
+type Same struct {
+}
+
 // Private methods (collection) (manipulators)
 
 func (this *collection) Add(key []byte, values... interface{}) error {
@@ -112,11 +115,6 @@ func (this *collection) Set(key []byte, values... interface{}) error {
         panic("Wrong number of values provided.")
     }
 
-    rawvalues := make([][]byte, len(this.fields))
-    for index := 0; index < len(this.fields); index++ {
-        rawvalues[index] = this.fields[index].Encode(values[index])
-    }
-
     path := sha256(key)
 
     depth := 0
@@ -148,7 +146,14 @@ func (this *collection) Set(key []byte, values... interface{}) error {
                     cursor.backup()
                 }
 
-                cursor.values = rawvalues
+                for index := 0; index < len(this.fields); index++ {
+                    _, same := values[index].(Same)
+
+                    if !same {
+                        cursor.values[index] = this.fields[index].Encode(values[index])
+                    }
+                }
+
                 this.update(cursor)
 
                 break
