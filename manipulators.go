@@ -181,3 +181,20 @@ func (this *collection) Set(key []byte, values... interface{}) error {
 
     return nil
 }
+
+func (this *collection) SetField(key []byte, field int, value interface{}) error {
+    if field >= len(this.fields) {
+        panic("Field does not exist.")
+    }
+
+    values := make([]interface{}, len(this.fields))
+    for index := 0; index < len(this.fields); index++ {
+        if index == field {
+            values[index] = value
+        } else {
+            values[index] = Same{}
+        }
+    }
+
+    return this.Set(key, values...)
+}

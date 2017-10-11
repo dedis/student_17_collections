@@ -164,3 +164,35 @@ func TestManipulatorsSet(test *testing.T) {
         collection.Set([]byte("panickey"), uint64(13), uint64(44))
     })
 }
+
+func TestManipulatorsSetField(test *testing.T) {
+    ctx := testctx("[manipulators.go]", test)
+
+    data := Data{}
+    collection := EmptyCollection(data, data)
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Add(key, []byte{}, []byte{})
+    }
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.SetField(key, index % 2, []byte("x"))
+    }
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        if index % 2 == 0 {
+            ctx.verify.values("[setfield]", &collection, key, []byte("x"), []byte{})
+        } else {
+            ctx.verify.values("[setfield]", &collection, key, []byte{}, []byte("x"))
+        }
+    }
+}
