@@ -30,7 +30,7 @@ func TestManipulatorsAdd(test *testing.T) {
 
     error := unknownroot.Add([]byte("key"))
     if error == nil {
-        test.Error("[unknownroot]", "Add should yield an error on a collection with unknown root.")
+        test.Error("[manipulators.go]", "[unknownroot]", "Add should yield an error on a collection with unknown root.")
     }
 
     unknownrootchildren := EmptyCollection()
@@ -39,7 +39,7 @@ func TestManipulatorsAdd(test *testing.T) {
 
     error = unknownrootchildren.Add([]byte("key"))
     if error == nil {
-        test.Error("[unknownrootchildren]", "Add should yield an error on a collection with unknown root children.")
+        test.Error("[manipulators.go]", "[unknownrootchildren]", "Add should yield an error on a collection with unknown root children.")
     }
 
     keycollision := EmptyCollection()
@@ -47,7 +47,7 @@ func TestManipulatorsAdd(test *testing.T) {
 
     error = keycollision.Add([]byte("key"))
     if error == nil {
-        test.Error("[keycollision]", "Add should yield an error on key collision.")
+        test.Error("[manipulators.go]", "[keycollision]", "Add should yield an error on key collision.")
     }
 
     transaction := EmptyCollection(stake64)
@@ -67,7 +67,7 @@ func TestManipulatorsAdd(test *testing.T) {
     }
 
     if len(transaction.temporary) < 512 {
-        test.Error("[transactioncollection]", "Not enough temporary nodes listed in a collection without scope.")
+        test.Error("[manipulators.go]", "[transactioncollection]", "Not enough temporary nodes listed in a collection without scope.")
     }
 
     ctx.should_panic("[wrongvalues]", func() {
