@@ -112,16 +112,42 @@ func (this testctxverifier) tree(prefix string, collection *collection) {
     this.treerecursion(prefix, collection, collection.root, []bool{})
 }
 
-func (this testctxverifier) keyrecursion(key []byte, node *node) bool {
+func (this testctxverifier) keyrecursion(key []byte, node *node) *node {
     if node.leaf() {
-        return equal(node.key, key)
+        if equal(node.key, key) {
+            return node
+        } else {
+            return nil
+        }
     } else {
-        return (this.keyrecursion(key, node.children.left)) || (this.keyrecursion(key, node.children.right))
+        left := this.keyrecursion(key, node.children.left)
+        right := this.keyrecursion(key, node.children.right)
+
+        if left != nil {
+            return left
+        } else {
+            return right
+        }
     }
 }
 
 func (this testctxverifier) key(prefix string, collection *collection, key []byte) {
-    if !(this.keyrecursion(key, collection.root)) {
+    if this.keyrecursion(key, collection.root) == nil {
         this.test.Error(this.file, prefix, "Node not found.")
+    }
+}
+
+func (this testctxverifier) values(prefix string, collection *collection, key []byte, values... interface{}) {
+    node := this.keyrecursion(key, collection.root)
+
+    if node == nil {
+        this.test.Error(this.file, prefix, "Node not found.")
+    }
+
+    for index := 0; index < len(collection.fields); index++ {
+        rawvalue := collection.fields[index].Encode(values[index])
+        if !(equal(rawvalue, node.values[index])) {
+            this.test.Error(this.file, prefix, "Wrong values.")
+        }
     }
 }

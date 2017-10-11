@@ -106,3 +106,73 @@ func (this *collection) Add(key []byte, values... interface{}) error {
 
     return nil
 }
+
+func (this *collection) Set(key []byte, values... interface{}) error {
+    if len(values) != len(this.fields) {
+        panic("Wrong number of values provided.")
+    }
+
+    rawvalues := make([][]byte, len(this.fields))
+    for index := 0; index < len(this.fields); index++ {
+        rawvalues[index] = this.fields[index].Encode(values[index])
+    }
+
+    path := sha256(key)
+
+    depth := 0
+    cursor := this.root
+
+    if !(cursor.known) {
+        return errors.New("Applying update to unknown subtree. Proof needed.")
+    }
+
+    for {
+        if !(cursor.children.left.known) || !(cursor.children.right.known) {
+            return errors.New("Applying update to unknown subtree. Proof needed.")
+        }
+
+        step := bit(path[:], depth)
+        depth++
+
+        if step {
+            cursor = cursor.children.right
+        } else {
+            cursor = cursor.children.left
+        }
+
+        if cursor.leaf() {
+            if !(equal(cursor.key, key)) {
+                return errors.New("Key not found.")
+            } else {
+                if this.transaction {
+                    cursor.backup()
+                }
+
+                cursor.values = rawvalues
+                this.update(cursor)
+
+                break
+            }
+        }
+    }
+
+    for {
+        if cursor.parent == nil {
+            break
+        }
+
+        cursor = cursor.parent
+
+        if this.transaction {
+            cursor.transaction.inconsistent = true
+        } else {
+            this.update(cursor)
+        }
+    }
+
+    if !(this.transaction) {
+        this.collect()
+    }
+
+    return nil
+}

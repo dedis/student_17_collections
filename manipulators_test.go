@@ -78,3 +78,88 @@ func TestManipulatorsAdd(test *testing.T) {
         keycollision.Add([]byte("panickey"), uint64(13))
     })
 }
+
+func TestManipulatorsSet(test *testing.T) {
+    ctx := testctx("[manipulators.go]", test)
+
+    stake64 := Stake64{}
+    collection := EmptyCollection(stake64)
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Add(key, uint64(index))
+    }
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Set(key, uint64(2 * index))
+        ctx.verify.tree("[stakecollection]", &collection)
+    }
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        ctx.verify.values("[set]", &collection, key, uint64(index * 2))
+    }
+
+    unknownroot := EmptyCollection(stake64)
+    unknownroot.root.known = false
+
+    error := unknownroot.Set([]byte("key"), uint64(0))
+    if error == nil {
+        test.Error("[manipulators.go]", "[unknownroot]", "Set should yield an error on a collection with unknown root.")
+    }
+
+    unknownrootchildren := EmptyCollection(stake64)
+    unknownrootchildren.root.children.left.known = false
+    unknownrootchildren.root.children.right.known = false
+
+    error = unknownrootchildren.Set([]byte("key"), uint64(0))
+    if error == nil {
+        test.Error("[manipulators.go]", "[unknownrootchildren]", "Set should yield an error on a collection with unknown root children.")
+    }
+
+    error = collection.Set([]byte("key"), uint64(13))
+    if error == nil {
+        test.Error("[manipulators.go]", "[notfound]", "Set should yield error when prompted to alter a value that does not exist.")
+    }
+
+    transaction := EmptyCollection(stake64)
+    transaction.Scope.None()
+    transaction.transaction = true
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        transaction.Add(key, uint64(index))
+    }
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        transaction.Set(key, uint64(2 * index))
+    }
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        ctx.verify.values("[transactioncollection]", &transaction, key, uint64(2 * index))
+    }
+
+    if len(transaction.temporary) < 512 {
+        test.Error("[manipulators.go]", "[transactioncollection]", "Not enough temporary nodes listed in a collection without scope.")
+    }
+
+    ctx.should_panic("[wrongvalues]", func() {
+        collection.Set([]byte("panickey"))
+    })
+
+    ctx.should_panic("[wrongvalues]", func() {
+        collection.Set([]byte("panickey"), uint64(13), uint64(44))
+    })
+}
