@@ -32,6 +32,9 @@ func TestTransactionRollback(test *testing.T) {
         reference.Add(key)
     }
 
+    collection.Scope.None()
+    reference.Scope.None()
+
     collection.Begin()
 
     for index := 512; index < 1024; index++ {
