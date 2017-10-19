@@ -198,3 +198,86 @@ func (this *collection) SetField(key []byte, field int, value interface{}) error
 
     return this.Set(key, values...)
 }
+
+func (this *collection) Remove(key []byte) error {
+    path := sha256(key)
+
+    depth := 0
+    cursor := this.root
+
+    if !(cursor.known) {
+        return errors.New("Applying update to unknown subtree. Proof needed.")
+    }
+
+    for {
+        if !(cursor.children.left.known) || !(cursor.children.right.known) {
+            return errors.New("Applying update to unknown subtree. Proof needed.")
+        }
+
+        step := bit(path[:], depth)
+        depth++
+
+        if step {
+            cursor = cursor.children.right
+        } else {
+            cursor = cursor.children.left
+        }
+
+        if cursor.leaf() {
+            if !(equal(cursor.key, key)) {
+                return errors.New("Key not found.")
+            } else {
+                if this.transaction {
+                    cursor.backup()
+                }
+
+                this.placeholder(cursor)
+                break
+            }
+        }
+    }
+
+    for {
+        if cursor.parent == nil {
+            break
+        }
+
+        cursor = cursor.parent
+
+        if (cursor.parent != nil) && cursor.children.left.placeholder() && cursor.children.right.placeholder() {
+            if this.transaction {
+                cursor.backup()
+            }
+
+            this.placeholder(cursor)
+        } else if (cursor.parent != nil) && ((cursor.children.left.placeholder() && cursor.children.right.leaf()) || (cursor.children.right.placeholder() && cursor.children.left.leaf())) {
+            if this.transaction {
+                cursor.backup()
+            }
+
+            if cursor.children.left.placeholder() {
+                cursor.label = cursor.children.right.label
+                cursor.key = cursor.children.right.key
+                cursor.values = cursor.children.right.values
+            } else {
+                cursor.label = cursor.children.left.label
+                cursor.key = cursor.children.left.key
+                cursor.values = cursor.children.left.values
+            }
+
+            cursor.prune()
+        } else {
+            if this.transaction {
+                cursor.transaction.inconsistent = true
+            } else {
+                this.update(cursor)
+            }
+        }
+    }
+
+    if !(this.transaction) {
+        this.collect()
+    }
+
+    return nil
+}

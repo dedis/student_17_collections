@@ -196,3 +196,55 @@ func TestManipulatorsSetField(test *testing.T) {
         }
     }
 }
+
+func TestManipulatorsRemove(test *testing.T) {
+    ctx := testctx("[manipulators.go]", test)
+
+    collection := EmptyCollection()
+    reference := EmptyCollection()
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Add(key)
+    }
+
+    collection.Add([]byte("test"))
+    reference.Add([]byte("test"))
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Remove(key)
+        ctx.verify.tree("[remove]", &collection)
+    }
+
+    if collection.root.label != reference.root.label {
+        test.Error("[manipulators.go]", "[remove]", "Label is not path-independent.")
+    }
+
+    unknownroot := EmptyCollection()
+    unknownroot.root.known = false
+
+    error := unknownroot.Remove([]byte("key"))
+    if error == nil {
+        test.Error("[manipulators.go]", "[unknownroot]", "Remove should yield an error on a collection with unknown root.")
+    }
+
+    unknownrootchildren := EmptyCollection()
+    unknownrootchildren.root.children.left.known = false
+    unknownrootchildren.root.children.right.known = false
+
+    error = unknownrootchildren.Remove([]byte("key"))
+    if error == nil {
+        test.Error("[manipulators.go]", "[unknownrootchildren]", "Remove should yield an error on a collection with unknown root children.")
+    }
+
+    error = collection.Remove([]byte("wrongkey"));
+
+    if error == nil {
+        test.Error("[manipulators.go]", "[notfound]", "Remove should yield an error when provided with a key that does not lie in the collection.")
+    }
+}

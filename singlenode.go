@@ -13,6 +13,9 @@ func (this *collection) placeholder(node *node) {
         node.values[index] = this.fields[index].Placeholder()
     }
 
+    node.children.left = nil
+    node.children.right = nil
+
     this.update(node)
 }
 
