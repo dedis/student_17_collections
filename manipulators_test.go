@@ -187,6 +187,10 @@ func TestManipulatorsSetField(test *testing.T) {
             ctx.verify.values("[setfield]", &collection, key, []byte{}, []byte("x"))
         }
     }
+
+    ctx.should_panic("[fieldoutofrange]", func() {
+        collection.SetField([]byte("key"), 5, []byte("data"))
+    })
 }
 
 func TestManipulatorsRemove(test *testing.T) {
@@ -238,5 +242,34 @@ func TestManipulatorsRemove(test *testing.T) {
 
     if error == nil {
         test.Error("[manipulators.go]", "[notfound]", "Remove should yield an error when provided with a key that does not lie in the collection.")
+    }
+
+    transaction := EmptyCollection()
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        transaction.Add(key)
+    }
+
+    transaction.Scope.None()
+    transaction.transaction = true
+
+    for index := 0; index < 512; index += 2 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        transaction.Remove(key)
+    }
+
+    for index := 0; index < 512; index += 2 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        ctx.verify.nokey("[transactioncollection]", &transaction, key)
+    }
+
+    for index := 1; index < 512; index += 2 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        ctx.verify.key("[transactioncollection]", &transaction, key)
     }
 }

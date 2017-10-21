@@ -194,6 +194,12 @@ func (this testctxverifier) key(prefix string, collection *collection, key []byt
     }
 }
 
+func (this testctxverifier) nokey(prefix string, collection *collection, key []byte) {
+    if this.keyrecursion(key, collection.root) != nil {
+        this.test.Error(this.file, prefix, "Unexpected node found.")
+    }
+}
+
 func (this testctxverifier) values(prefix string, collection *collection, key []byte, values... interface{}) {
     node := this.keyrecursion(key, collection.root)
 
