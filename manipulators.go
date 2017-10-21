@@ -18,7 +18,6 @@ func (this *collection) Add(key []byte, values... interface{}) error {
     }
 
     path := sha256(key)
-    store := this.Scope.match(path)
 
     depth := 0
     cursor := this.root
@@ -81,10 +80,6 @@ func (this *collection) Add(key []byte, values... interface{}) error {
                 cursor.children.left.values = collision.values
 
                 this.placeholder(cursor.children.right)
-            }
-
-            if !store {
-                this.temporary = append(this.temporary, cursor.children.left, cursor.children.right)
             }
         }
     }

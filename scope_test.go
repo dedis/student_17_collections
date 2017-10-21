@@ -35,8 +35,12 @@ func TestScopeMask(test *testing.T) {
         pathslice, _ := hex.DecodeString(round.path)
         path := digest(pathslice)
 
-        if mask.match(path) != round.expected {
+        if mask.match(path, 256) != round.expected {
             test.Error("[scope.go]", "[match]", "Wrong match on reference round.")
+        }
+
+        if !(mask.match(path, 0)) {
+            test.Error("[scope.go]", "[match]", "No match on zero-bit match.")
         }
     }
 }
@@ -95,32 +99,36 @@ func TestScopeMatch(test *testing.T) {
     path := digest(pathslice)
 
     scope.None()
-    if scope.match(path) {
+    if scope.match(path, 12) {
         test.Error("[scope.go]", "[all]", "No-mask match succeeds after None().")
     }
 
     scope.All()
-    if !(scope.match(path)) {
+    if !(scope.match(path, 13)) {
         test.Error("[scope.go]", "[all]", "No-mask match fails after All().")
     }
 
     nomatch, _ := hex.DecodeString("fa91")
     scope.Add(nomatch, 16)
 
-    if scope.match(path) {
+    if scope.match(path, 256) {
         test.Error("[scope.go]", "[match]", "Scope match succeeds on a non-matching mask.")
     }
 
     maybematch, _ := hex.DecodeString("86")
     scope.Add(maybematch, 8)
 
-    if scope.match(path) {
+    if scope.match(path, 256) {
         test.Error("[scope.go]", "[match]", "Scope match succeeds on a non-matching mask.")
+    }
+
+    if !(scope.match(path, 6)) {
+        test.Error("[scope.go]", "[match]", "Scope match fails on a matching mask.")
     }
 
     scope.Add(maybematch, 6)
 
-    if !(scope.match(path)) {
+    if !(scope.match(path, 44)) {
         test.Error("[scope.go]", "[match]", "Scope match fails on matching mask.")
     }
 }

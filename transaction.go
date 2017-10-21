@@ -1,5 +1,7 @@
 package collection
 
+import csha256 "crypto/sha256"
+
 // Methods (collection) (transaction methods)
 
 func (this *collection) Begin() {
@@ -28,12 +30,6 @@ func (this *collection) Rollback() {
     }
 
     explore(this.root)
-
-    for index := 0; index < len(this.temporary); index++ {
-        this.temporary[index] = nil
-    }
-
-    this.temporary = this.temporary[:0]
     this.transaction = false
 }
 
@@ -85,15 +81,55 @@ func (this *collection) fix() {
 }
 
 func (this *collection) collect() {
-    for index := 0; index < len(this.temporary); index++ {
-        this.temporary[index].known = false
+    var explore func(*node, [csha256.Size]byte, int)
+    explore = func(node *node, path [csha256.Size]byte, bit int) {
+        if !(node.known) {
+            return
+        }
 
-        this.temporary[index].key = []byte{}
-        this.temporary[index].values = [][]byte{}
+        if bit > 0 && !(this.Scope.match(path, bit - 1)) {
+            node.known = false
+            node.key = []byte{}
+            node.values = [][]byte{}
 
-        this.temporary[index].prune()
-        this.temporary[index] = nil
+            node.prune()
+        } else if !(node.leaf()) {
+            setbit(path[:], bit + 1, false)
+            explore(node.children.left, path, bit + 1)
+
+            setbit(path[:], bit + 1, true)
+            explore(node.children.right, path, bit + 1)
+        }
     }
 
-    this.temporary = this.temporary[:0]
+    if !(this.root.known) {
+        return
+    }
+
+    var path [csha256.Size]byte
+    none := true
+
+    setbit(path[:], 0, false)
+    if this.Scope.match(path, 0) {
+        none = false
+    }
+
+    setbit(path[:], 0, true)
+    if this.Scope.match(path, 0) {
+        none = false
+    }
+
+    if none {
+        this.root.known = false
+        this.root.key = []byte{}
+        this.root.values = [][]byte{}
+
+        this.root.prune()
+    } else {
+        setbit(path[:], 0, false)
+        explore(this.root.children.left, path, 0)
+
+        setbit(path[:], 0, true)
+        explore(this.root.children.right, path, 0)
+    }
 }

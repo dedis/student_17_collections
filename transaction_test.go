@@ -57,10 +57,6 @@ func TestTransactionRollback(test *testing.T) {
         test.Error("[transaction.go]", "[rollback]", "Fixing after Rollback() has a non-null effect.")
     }
 
-    if len(collection.temporary) != 0 {
-        test.Error("[transaction.go]", "[rollback]", "Rollback() does not empty the temporary nodes slice.")
-    }
-
     ctx.should_panic("[rollbackagain]", func() {
         collection.Rollback()
     })
@@ -98,9 +94,7 @@ func TestTransactionEnd(test *testing.T) {
         test.Error("[transaction.go]", "[end]", "Fixing after End() alters the tree root.")
     }
 
-    if len(collection.temporary) != 0 {
-        test.Error("[transaction.go]", "[end]", "End() does not empty the temporary nodes slice.")
-    }
+    ctx.verify.scope("[scope]", &collection)
 
     ctx.should_panic("[endagain]", func() {
         collection.End()
@@ -193,25 +187,43 @@ func TestTransactionFix(test *testing.T) {
 }
 
 func TestTransactionCollect(test *testing.T) {
+    ctx := testctx("[transaction.go]", test)
+
+    nonecollection := EmptyCollection()
+    nonecollection.Scope.None()
+
+    nonecollection.root.children.left.branch()
+    nonecollection.root.children.right.branch()
+    nonecollection.root.children.right.children.left.branch()
+    nonecollection.root.children.right.children.right.branch()
+
+    nonecollection.collect()
+
+    if nonecollection.root.known {
+        test.Error("[transaction.go]", "[root]", "Root is known after collecting collection with empty scope.")
+    }
+
+    if (nonecollection.root.children.left) != nil || (nonecollection.root.children.right) != nil {
+        test.Error("[transaction.go]", "[children]", "Children of root are not pruned after collecting collection with empty scope.")
+    }
+
     collection := EmptyCollection()
+    collection.Scope.Add([]byte{0x00}, 1)
+    collection.Scope.Add([]byte{0xff}, 3)
+    collection.Scope.Add([]byte{0xd2}, 6)
 
-    collection.root.children.left.branch()
-    collection.root.children.right.branch()
-    collection.root.children.right.children.left.branch()
-    collection.root.children.right.children.right.branch()
+    collection.transaction = true
 
-    collection.temporary = append(collection.temporary, collection.root.children.left, collection.root.children.right)
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        
+        collection.Add(key)
+    }
+
+    collection.fix()
     collection.collect()
+    collection.transaction = false
 
-    if collection.root.children.left.known || collection.root.children.right.known {
-        test.Error("[transaction.go]", "[known]", "Collect doesn't make temporary nodes unknown.")
-    }
-
-    if (collection.root.children.left.children.left != nil) || (collection.root.children.left.children.right != nil) || (collection.root.children.right.children.left != nil) || (collection.root.children.right.children.right != nil) {
-        test.Error("[transaction.go]", "[children]", "Collect does not prune children of temporary nodes.")
-    }
-
-    if len(collection.temporary) != 0 {
-        test.Error("[transaction.go]", "[temporary]", "Collect does not empty temporary nodes list.")
-    }
+    ctx.verify.scope("[collect]", &collection)
 }

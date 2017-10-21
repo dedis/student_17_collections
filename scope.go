@@ -11,8 +11,12 @@ type mask struct {
 
 // Private methods
 
-func (this *mask) match(path [csha256.Size]byte) bool {
-    return match(path[:], this.value, this.bits)
+func (this *mask) match(path [csha256.Size]byte, bits int) bool {
+    if bits < this.bits {
+        return match(path[:], this.value, bits)
+    } else {
+        return match(path[:], this.value, this.bits)
+    }
 }
 
 // scope
@@ -40,13 +44,13 @@ func (this *scope) Add(value []byte, bits int) {
 
 // Private methods
 
-func (this *scope) match(path [csha256.Size]byte) bool {
+func (this *scope) match(path [csha256.Size]byte, bits int) bool {
     if len(this.masks) == 0 {
         return this.all
     }
 
     for index := 0; index < len(this.masks); index++ {
-        if this.masks[index].match(path) {
+        if this.masks[index].match(path, bits) {
             return true
         }
     }

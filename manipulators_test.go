@@ -66,10 +66,6 @@ func TestManipulatorsAdd(test *testing.T) {
         ctx.verify.key("[transactioncollection]", &transaction, key)
     }
 
-    if len(transaction.temporary) < 512 {
-        test.Error("[manipulators.go]", "[transactioncollection]", "Not enough temporary nodes listed in a collection without scope.")
-    }
-
     ctx.should_panic("[wrongvalues]", func() {
         collection.Add([]byte("panickey"))
     })
@@ -150,10 +146,6 @@ func TestManipulatorsSet(test *testing.T) {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(index))
         ctx.verify.values("[transactioncollection]", &transaction, key, uint64(2 * index))
-    }
-
-    if len(transaction.temporary) < 512 {
-        test.Error("[manipulators.go]", "[transactioncollection]", "Not enough temporary nodes listed in a collection without scope.")
     }
 
     ctx.should_panic("[wrongvalues]", func() {

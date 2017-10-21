@@ -23,6 +23,17 @@ func bit(buffer []byte, index int) bool {
     return ((buffer[byteidx] & (uint8(1) << bitidx)) != 0)
 }
 
+func setbit(buffer []byte, index int, value bool) {
+    byteidx := uint(index) / 8
+    bitidx := 7 - (uint(index) % 8)
+
+    if value {
+        buffer[byteidx] |= (uint8(1) << bitidx)
+    } else {
+        buffer[byteidx] &^= (uint8(1) << bitidx)
+    }
+}
+
 func match(lho []byte, rho []byte, bits int) bool {
     for index := 0; index < bits; {
         if index < bits - 8 {

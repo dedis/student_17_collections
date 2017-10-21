@@ -1,6 +1,7 @@
 package collection
 
 import "testing"
+import csha256 "crypto/sha256"
 
 // testctxstruct
 
@@ -110,6 +111,62 @@ func (this testctxverifier) treerecursion(prefix string, collection *collection,
 
 func (this testctxverifier) tree(prefix string, collection *collection) {
     this.treerecursion(prefix, collection, collection.root, []bool{})
+}
+
+func (this testctxverifier) scoperecursion(prefix string, collection *collection, node *node, path []bool) {
+    if !(node.known) {
+        return
+    }
+
+    var pathbuf [csha256.Size]byte
+
+    for index := 0; index < len(path); index++ {
+        setbit(pathbuf[:], index, path[index])
+    }
+
+    if node.known && len(path) > 1 && !(collection.Scope.match(pathbuf, len(path) - 2)) {
+        this.test.Error(this.file, prefix, "Out-of-scope node was not pruned from tree.")
+    } else {
+        if !(node.leaf()) {
+            leftpath := make([]bool, len(path))
+            rightpath := make([]bool, len(path))
+
+            copy(leftpath, path)
+            copy(rightpath, path)
+
+            leftpath = append(leftpath, false)
+            rightpath = append(rightpath, true)
+
+            this.scoperecursion(prefix, collection, node.children.left, leftpath)
+            this.scoperecursion(prefix, collection, node.children.right, rightpath)
+        }
+    }
+}
+
+func (this testctxverifier) scope(prefix string, collection *collection) {
+    var pathbuf [csha256.Size]byte
+    none := true
+
+    setbit(pathbuf[:], 0, false)
+    if collection.Scope.match(pathbuf, 0) {
+        none = false
+    }
+
+    setbit(pathbuf[:], 0, true)
+    if collection.Scope.match(pathbuf, 0) {
+        none = false
+    }
+
+    if none {
+        if collection.root.known {
+            this.test.Error(this.file, prefix, "None-scope collection has known root.")
+        }
+    } else {
+        if collection.root.known {
+            this.scoperecursion(prefix, collection, collection.root.children.left, []bool{false})
+            this.scoperecursion(prefix, collection, collection.root.children.right, []bool{true})
+        }
+    }
 }
 
 func (this testctxverifier) keyrecursion(key []byte, node *node) *node {

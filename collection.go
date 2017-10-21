@@ -14,7 +14,6 @@ type collection struct {
     Scope scope
 
     transaction bool
-    temporary []*node
 }
 
 // Constructors

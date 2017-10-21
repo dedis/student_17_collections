@@ -22,7 +22,7 @@ func TestSha256(test *testing.T) {
     check("[bool]", "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2", true)
     check("[bool]", "96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7", false)
     check("[int8]", "9e6282e4f25e370ce617e21d6fe265e88b9e7b8682cf00059b9d128d9381f09d", int8(8))
-    check("[int8]", "1649d7d9c3337d6e64913d6e659d8d6f021df01c41343a1237dbbecb6c589b7c", int8(-4));
+    check("[int8]", "1649d7d9c3337d6e64913d6e659d8d6f021df01c41343a1237dbbecb6c589b7c", int8(-4))
     check("[int16]", "94a9964053c051db20446323bb1c28df4a85ee6200201ae8e9c964290ea0c22c", int16(3072))
     check("[int16]", "b43539de6ef0070b1903d5c74ed1d00e8a416ab60816a31af2206cc94231ae40", int16(-7048))
     check("[int32]", "4970cf9d460a0defb336c8a21ccfcf65f2197356737fe1a7ca117d028f688f13", int32(1048576))

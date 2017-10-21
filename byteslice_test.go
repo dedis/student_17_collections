@@ -38,6 +38,31 @@ func TestBytesliceBit(test *testing.T) {
     }
 }
 
+func TestBytesliceSetBit(test * testing.T) {
+    source, _ := hex.DecodeString("85f46bd1ba19d1014b1179edd451ece95296e4a8c765ba8bba86c16893906398")
+    destination := make([]byte, len(source))
+
+    for index := 0; index < 8 * len(destination); index++ {
+        setbit(destination, index, bit(source, index))
+    }
+
+    if !(equal(source, destination)) {
+        test.Error("[byteslice.go]", "[setbit]", "Wrong bit set by setbit.")
+    }
+
+    for index := 0; index < len(destination); index++ {
+        destination[index] = 0xff;
+    }
+
+    for index := 0; index < 8 * len(destination); index++ {
+        setbit(destination, index, bit(source, index))
+    }
+
+    if !(equal(source, destination)) {
+        test.Error("[byteslice.go]", "[setbit]", "Wrong bit set by setbit.")
+    }
+}
+
 func TestBytesliceMatch(test *testing.T) {
     min := func(lho, rho int) int {
         if lho < rho {
