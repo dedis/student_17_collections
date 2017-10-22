@@ -239,13 +239,7 @@ func (this *collection) Remove(key []byte) error {
 
         cursor = cursor.parent
 
-        if (cursor.parent != nil) && cursor.children.left.placeholder() && cursor.children.right.placeholder() {
-            if this.transaction {
-                cursor.backup()
-            }
-
-            this.placeholder(cursor)
-        } else if (cursor.parent != nil) && ((cursor.children.left.placeholder() && cursor.children.right.leaf()) || (cursor.children.right.placeholder() && cursor.children.left.leaf())) {
+        if (cursor.parent != nil) && ((cursor.children.left.placeholder() && cursor.children.right.leaf()) || (cursor.children.right.placeholder() && cursor.children.left.leaf())) {
             if this.transaction {
                 cursor.backup()
             }
