@@ -217,7 +217,7 @@ func TestTransactionCollect(test *testing.T) {
     for index := 0; index < 512; index++ {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(index))
-        
+
         collection.Add(key)
     }
 
@@ -226,4 +226,21 @@ func TestTransactionCollect(test *testing.T) {
     collection.transaction = false
 
     ctx.verify.scope("[collect]", &collection)
+
+    unknownroot := EmptyCollection()
+    unknownroot.root.known = false
+    unknownroot.collect()
+
+    if (unknownroot.root.children.left == nil) || (unknownroot.root.children.right == nil) {
+        test.Error("[transaction.go]", "[unknownroot]", "collect() removes children of unknown root.")
+    }
+
+    collection.Scope.None()
+    collection.Scope.Add([]byte{0xd2}, 6)
+    collection.root.children.left.known = false
+    collection.collect()
+    
+    if (collection.root.children.left.children.left == nil) || (collection.root.children.left.children.right == nil) {
+        test.Error("[transaction.go]", "[unknownrootchild]", "collect() removes children of unknown root child.")
+    }
 }
