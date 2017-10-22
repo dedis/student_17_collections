@@ -272,4 +272,19 @@ func TestManipulatorsRemove(test *testing.T) {
         binary.BigEndian.PutUint64(key, uint64(index))
         ctx.verify.key("[transactioncollection]", &transaction, key)
     }
+
+    for index := 1; index < 512; index += 2 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+        transaction.Remove(key)
+    }
+
+    transaction.fix()
+    transaction.collect()
+    transaction.transaction = false
+
+    empty := EmptyCollection()
+    if transaction.root.label != empty.root.label {
+        test.Error("[manipulators.go]", "[transaction]", "Transaction on collection doesn't produce empty root after removing all records.")
+    }
 }
