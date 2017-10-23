@@ -108,4 +108,10 @@ func TestSinglenodeUpdate(test *testing.T) {
     }
 
     ctx.verify.tree("[tree]", &stakecollection)
+
+    stakecollection.root.children.left.values[0] = make([]byte, 5)
+
+    if stakecollection.update(stakecollection.root) == nil {
+        test.Error("[singlenode.go]", "[stake]", "Update() does not yield an error when updating a node with ill-formed children values.")
+    }
 }
