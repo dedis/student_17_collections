@@ -72,8 +72,13 @@ func (this testctxverifier) node(prefix string, collection *collection, node *no
 
         if node.children.left.known && node.children.right.known {
             for index := 0; index < len(collection.fields); index++ {
-                value := collection.fields[index].Parent(node.children.left.values[index], node.children.right.values[index])
-                if !equal(value, node.values[index]) {
+                parentvalue, parenterror := collection.fields[index].Parent(node.children.left.values[index], node.children.right.values[index])
+
+                if parenterror != nil {
+                    this.test.Error(this.file, prefix, "Malformed children values.")
+                }
+
+                if !equal(parentvalue, node.values[index]) {
                     this.test.Error(this.file, prefix, "One or more internal node values conflict with the corresponding children values.")
                     return
                 }

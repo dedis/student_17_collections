@@ -29,7 +29,8 @@ func TestSinglenodePlaceholder(test *testing.T) {
         test.Error("[singlenode.go]", "[values]", "Placeholder nodes of a stake collection should have exactly one value.")
     }
 
-    if stake64.Decode(stakenode.values[0]).(uint64) != 0 {
+    placeholderstake, _ := stake64.Decode(stakenode.values[0])
+    if placeholderstake.(uint64) != 0 {
         test.Error("[singlenode.go]", "[value]", "Placeholder nodes of a stake collection should have zero stake.")
     }
 
@@ -47,7 +48,8 @@ func TestSinglenodePlaceholder(test *testing.T) {
         test.Error("[singlenode.go]", "[values]", "Placeholder nodes of a stake and data collection should have exactly two values.")
     }
 
-    if (stake64.Decode(stakedatanode.values[0]).(uint64) != 0) || (len(stakedatanode.values[1]) != 0) {
+    placeholderstake, _ = stake64.Decode(stakedatanode.values[0])
+    if (placeholderstake.(uint64) != 0) || (len(stakedatanode.values[1]) != 0) {
         test.Error("[singlenode.go]", "[value]", "Placeholder nodes of a stake and data collection should have zero stake and empty data value.")
     }
 }
@@ -83,7 +85,9 @@ func TestSinglenodeUpdate(test *testing.T) {
         test.Error("[singlenode.go]", "[stake]", "Update fails on stake root.")
     }
 
-    if stake64.Decode(stakecollection.root.values[0]).(uint64) != 66 {
+    rootstake, _ := stake64.Decode(stakecollection.root.values[0])
+
+    if rootstake.(uint64) != 66 {
         test.Error("[singlenode.go]", "[stake]", "Wrong value on stake root.")
     }
 
@@ -97,7 +101,9 @@ func TestSinglenodeUpdate(test *testing.T) {
         test.Error("[singlenode.go]", "[stake]", "Update fails on stake root.")
     }
 
-    if stake64.Decode(stakecollection.root.values[0]).(uint64) != 99 {
+    rootstake, _ = stake64.Decode(stakecollection.root.values[0])
+
+    if rootstake.(uint64) != 99 {
         test.Error("[singlenode.go]", "[stake]", "Wrong value on stake root.")
     }
 

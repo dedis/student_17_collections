@@ -34,7 +34,13 @@ func (this *collection) update(node *node) error {
         node.values = make([][]byte, len(this.fields))
 
         for index := 0; index < len(this.fields); index++ {
-            node.values[index] = this.fields[index].Parent(node.children.left.values[index], node.children.right.values[index])
+            parentvalue, parenterror := this.fields[index].Parent(node.children.left.values[index], node.children.right.values[index])
+
+            if parenterror != nil {
+                return parenterror
+            }
+
+            node.values[index] = parentvalue
         }
 
         node.label = sha256(false, node.values, node.children.left.label[:], node.children.right.label[:])

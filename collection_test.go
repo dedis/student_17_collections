@@ -36,7 +36,25 @@ func TestCollectionEmptyCollection(test *testing.T) {
         test.Error("[collection.go]", "[values]", "Nodes of a stake collection don't have exactly one value.")
     }
 
-    if stake64.Decode(stakecollection.root.values[0]).(uint64) != 0 || stake64.Decode(stakecollection.root.children.left.values[0]).(uint64) != 0 || stake64.Decode(stakecollection.root.children.right.values[0]).(uint64) != 0 {
+    rootstake, rooterror := stake64.Decode(stakecollection.root.values[0])
+
+    if rooterror != nil {
+        test.Error("[collection.go]", "[stake]", "Malformed stake root value.")
+    }
+
+    leftstake, lefterror := stake64.Decode(stakecollection.root.children.left.values[0])
+
+    if lefterror != nil {
+        test.Error("[collection.go]", "[stake]", "Malformed stake left child value.")
+    }
+
+    rightstake, righterror := stake64.Decode(stakecollection.root.children.right.values[0])
+
+    if righterror != nil {
+        test.Error("[collection.go]", "[stake]", "Malformed stake right child value")
+    }
+
+    if rootstake.(uint64) != 0 || leftstake.(uint64) != 0 || rightstake.(uint64) != 0 {
         test.Error("[collection.go]", "[stake]", "Nodes of an empty stake collection don't have zero stake.")
     }
 
