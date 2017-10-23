@@ -48,9 +48,19 @@ func (this * node) placeholder() bool {
 
 func (this *node) backup() {
     if this.transaction.backup == nil {
-        backup := new(node)
-        (*backup) = (*this)
-        this.transaction.backup = backup
+        this.transaction.backup = new(node)
+
+        this.transaction.backup.label = this.label
+        this.transaction.backup.known = this.known
+        this.transaction.backup.transaction.inconsistent = this.transaction.inconsistent
+
+        this.transaction.backup.key = this.key
+        this.transaction.backup.values = make([][]byte, len(this.values))
+        copy(this.transaction.backup.values, this.values)
+
+        this.transaction.backup.parent = this.parent
+        this.transaction.backup.children.left = this.children.left
+        this.transaction.backup.children.right = this.children.right
     }
 }
 

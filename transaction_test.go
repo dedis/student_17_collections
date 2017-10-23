@@ -21,15 +21,17 @@ func TestTransactionBegin(test *testing.T) {
 func TestTransactionRollback(test *testing.T) {
     ctx := testctx("[transaction.go]", test)
 
-    collection := EmptyCollection()
-    reference := EmptyCollection()
+    stake64 := Stake64{}
+
+    collection := EmptyCollection(stake64)
+    reference := EmptyCollection(stake64)
 
     for index := 0; index < 512; index++ {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(index))
 
-        collection.Add(key)
-        reference.Add(key)
+        collection.Add(key, uint64(index))
+        reference.Add(key, uint64(index))
     }
 
     collection.Scope.None()
@@ -41,7 +43,21 @@ func TestTransactionRollback(test *testing.T) {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(index))
 
-        collection.Add(key)
+        collection.Add(key, uint64(index))
+    }
+
+    for index := 0; index < 1024; index += 3 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Set(key, uint64(3 * index))
+    }
+
+    for index := 1; index < 1024; index += 3 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Remove(key)
     }
 
     collection.Rollback()
@@ -65,26 +81,47 @@ func TestTransactionRollback(test *testing.T) {
 func TestTransactionEnd(test *testing.T) {
     ctx := testctx("[transaction.go]", test)
 
-    collection := EmptyCollection()
+    stake64 := Stake64{}
+    collection := EmptyCollection(stake64)
 
     collection.Begin()
 
-    for index := 0; index < 512; index++ {
+    for index := 0; index < 1024; index++ {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(index))
 
-        collection.Add(key)
+        collection.Add(key, uint64(index))
+    }
+
+    for index := 0; index < 1024; index += 3 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Set(key, 3 * uint64(index))
+    }
+
+    for index := 1; index < 1024; index += 3 {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Remove(key)
     }
 
     collection.End()
 
     ctx.verify.tree("[end]", &collection)
 
-    for index := 0; index < 512; index++ {
+    for index := 0; index < 1024; index++ {
         key := make([]byte, 8)
         binary.BigEndian.PutUint64(key, uint64(index))
 
-        ctx.verify.key("[end]", &collection, key)
+        if (index % 3) == 0 {
+            ctx.verify.values("[end]", &collection, key, uint64(3 * index))
+        } else if (index % 3) == 1 {
+            ctx.verify.nokey("[end]", &collection, key)
+        } else {
+            ctx.verify.values("[end]", &collection, key, uint64(index))
+        }
     }
 
     oldroot := collection.root.label
@@ -239,7 +276,7 @@ func TestTransactionCollect(test *testing.T) {
     collection.Scope.Add([]byte{0xd2}, 6)
     collection.root.children.left.known = false
     collection.collect()
-    
+
     if (collection.root.children.left.children.left == nil) || (collection.root.children.left.children.right == nil) {
         test.Error("[transaction.go]", "[unknownrootchild]", "collect() removes children of unknown root child.")
     }
