@@ -76,7 +76,7 @@ func TestRecord(test *testing.T) {
         test.Error("[record.go]", "[values]", "Values() does not yield an error on record with ill-formed values.")
     }
 
-    match.values = match.values[0:]
+    match.values = match.values[:1]
 
     _, fewerror := match.Values()
 
