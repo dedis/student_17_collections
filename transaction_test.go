@@ -138,6 +138,65 @@ func TestTransactionEnd(test *testing.T) {
     })
 }
 
+func TestTransactionCollect(test *testing.T) {
+    ctx := testctx("[transaction.go]", test)
+
+    nonecollection := EmptyCollection()
+    nonecollection.Scope.None()
+
+    nonecollection.root.children.left.branch()
+    nonecollection.root.children.right.branch()
+    nonecollection.root.children.right.children.left.branch()
+    nonecollection.root.children.right.children.right.branch()
+
+    nonecollection.Collect()
+
+    if nonecollection.root.known {
+        test.Error("[transaction.go]", "[root]", "Root is known after collecting collection with empty scope.")
+    }
+
+    if (nonecollection.root.children.left) != nil || (nonecollection.root.children.right) != nil {
+        test.Error("[transaction.go]", "[children]", "Children of root are not pruned after collecting collection with empty scope.")
+    }
+
+    collection := EmptyCollection()
+    collection.Scope.Add([]byte{0x00}, 1)
+    collection.Scope.Add([]byte{0xff}, 3)
+    collection.Scope.Add([]byte{0xd2}, 6)
+
+    collection.transaction = true
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Add(key)
+    }
+
+    collection.fix()
+    collection.Collect()
+    collection.transaction = false
+
+    ctx.verify.scope("[collect]", &collection)
+
+    unknownroot := EmptyCollection()
+    unknownroot.root.known = false
+    unknownroot.Collect()
+
+    if (unknownroot.root.children.left == nil) || (unknownroot.root.children.right == nil) {
+        test.Error("[transaction.go]", "[unknownroot]", "Collect() removes children of unknown root.")
+    }
+
+    collection.Scope.None()
+    collection.Scope.Add([]byte{0xd2}, 6)
+    collection.root.children.left.known = false
+    collection.Collect()
+
+    if (collection.root.children.left.children.left == nil) || (collection.root.children.left.children.right == nil) {
+        test.Error("[transaction.go]", "[unknownrootchild]", "Collect() removes children of unknown root child.")
+    }
+}
+
 func TestTransactionConfirm(test *testing.T) {
     collection := EmptyCollection()
     reference := EmptyCollection()
@@ -221,63 +280,4 @@ func TestTransactionFix(test *testing.T) {
     }
 
     ctx.verify.tree("[fix]", &collection)
-}
-
-func TestTransactionCollect(test *testing.T) {
-    ctx := testctx("[transaction.go]", test)
-
-    nonecollection := EmptyCollection()
-    nonecollection.Scope.None()
-
-    nonecollection.root.children.left.branch()
-    nonecollection.root.children.right.branch()
-    nonecollection.root.children.right.children.left.branch()
-    nonecollection.root.children.right.children.right.branch()
-
-    nonecollection.collect()
-
-    if nonecollection.root.known {
-        test.Error("[transaction.go]", "[root]", "Root is known after collecting collection with empty scope.")
-    }
-
-    if (nonecollection.root.children.left) != nil || (nonecollection.root.children.right) != nil {
-        test.Error("[transaction.go]", "[children]", "Children of root are not pruned after collecting collection with empty scope.")
-    }
-
-    collection := EmptyCollection()
-    collection.Scope.Add([]byte{0x00}, 1)
-    collection.Scope.Add([]byte{0xff}, 3)
-    collection.Scope.Add([]byte{0xd2}, 6)
-
-    collection.transaction = true
-
-    for index := 0; index < 512; index++ {
-        key := make([]byte, 8)
-        binary.BigEndian.PutUint64(key, uint64(index))
-
-        collection.Add(key)
-    }
-
-    collection.fix()
-    collection.collect()
-    collection.transaction = false
-
-    ctx.verify.scope("[collect]", &collection)
-
-    unknownroot := EmptyCollection()
-    unknownroot.root.known = false
-    unknownroot.collect()
-
-    if (unknownroot.root.children.left == nil) || (unknownroot.root.children.right == nil) {
-        test.Error("[transaction.go]", "[unknownroot]", "collect() removes children of unknown root.")
-    }
-
-    collection.Scope.None()
-    collection.Scope.Add([]byte{0xd2}, 6)
-    collection.root.children.left.known = false
-    collection.collect()
-
-    if (collection.root.children.left.children.left == nil) || (collection.root.children.left.children.right == nil) {
-        test.Error("[transaction.go]", "[unknownrootchild]", "collect() removes children of unknown root child.")
-    }
 }

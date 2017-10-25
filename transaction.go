@@ -40,47 +40,12 @@ func (this *collection) End() {
 
     this.confirm()
     this.fix()
-    this.collect()
+    this.Collect()
 
     this.transaction = false
 }
 
-// Private methods (collection) (transaction methods)
-
-func (this *collection) confirm() {
-    var explore func(*node)
-    explore = func(node *node) {
-        if node.transaction.inconsistent || (node.transaction.backup != nil) {
-            node.transaction.backup = nil
-
-            if !(node.leaf()) {
-                explore(node.children.left)
-                explore(node.children.right)
-            }
-        }
-    }
-
-    explore(this.root)
-}
-
-func (this *collection) fix() {
-    var explore func(*node)
-    explore = func(node *node) {
-        if node.transaction.inconsistent {
-            if !(node.leaf()) {
-                explore(node.children.left)
-                explore(node.children.right)
-            }
-
-            this.update(node)
-            node.transaction.inconsistent = false
-        }
-    }
-
-    explore(this.root)
-}
-
-func (this *collection) collect() {
+func (this *collection) Collect() {
     var explore func(*node, [csha256.Size]byte, int)
     explore = func(node *node, path [csha256.Size]byte, bit int) {
         if !(node.known) {
@@ -132,4 +97,39 @@ func (this *collection) collect() {
         setbit(path[:], 0, true)
         explore(this.root.children.right, path, 0)
     }
+}
+
+// Private methods (collection) (transaction methods)
+
+func (this *collection) confirm() {
+    var explore func(*node)
+    explore = func(node *node) {
+        if node.transaction.inconsistent || (node.transaction.backup != nil) {
+            node.transaction.backup = nil
+
+            if !(node.leaf()) {
+                explore(node.children.left)
+                explore(node.children.right)
+            }
+        }
+    }
+
+    explore(this.root)
+}
+
+func (this *collection) fix() {
+    var explore func(*node)
+    explore = func(node *node) {
+        if node.transaction.inconsistent {
+            if !(node.leaf()) {
+                explore(node.children.left)
+                explore(node.children.right)
+            }
+
+            this.update(node)
+            node.transaction.inconsistent = false
+        }
+    }
+
+    explore(this.root)
 }

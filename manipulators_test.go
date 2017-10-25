@@ -302,7 +302,7 @@ func TestManipulatorsRemove(test *testing.T) {
     transaction.Remove(collidingkey)
 
     transaction.fix()
-    transaction.collect()
+    transaction.Collect()
     transaction.transaction = false
 
     empty := EmptyCollection()

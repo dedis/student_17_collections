@@ -50,7 +50,7 @@ func TestGettersRecord(test *testing.T) {
     }
 
     collection.Scope.None()
-    collection.collect()
+    collection.Collect()
 
     _, err := collection.Get([]byte("mykey")).Record()
 
@@ -135,7 +135,7 @@ func TestGettersProof(test *testing.T) {
     }
 
     collection.Scope.Add([]byte{0xff}, 1)
-    collection.collect()
+    collection.Collect()
 
     for index := 0; index < 512; index++ {
         key := make([]byte, 8)
@@ -154,7 +154,7 @@ func TestGettersProof(test *testing.T) {
     }
 
     collection.Scope.None()
-    collection.collect()
+    collection.Collect()
 
     _, err := collection.Get([]byte("mykey")).Proof()
     if err == nil {

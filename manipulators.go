@@ -99,7 +99,7 @@ func (this *collection) Add(key []byte, values... interface{}) error {
     }
 
     if !(this.transaction) {
-        this.collect()
+        this.Collect()
     }
 
     return nil
@@ -171,7 +171,7 @@ func (this *collection) Set(key []byte, values... interface{}) error {
     }
 
     if !(this.transaction) {
-        this.collect()
+        this.Collect()
     }
 
     return nil
@@ -265,7 +265,7 @@ func (this *collection) Remove(key []byte) error {
     }
 
     if !(this.transaction) {
-        this.collect()
+        this.Collect()
     }
 
     return nil
