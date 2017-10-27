@@ -7,6 +7,10 @@ func TestCollectionEmptyCollection(test *testing.T) {
 
     basecollection := EmptyCollection()
 
+    if !(basecollection.AutoCollect.value) {
+        test.Error("[collection.go]", "[autocollect]", "AutoCollect does not have true as default value.")
+    }
+
     if !(basecollection.root.known) || !(basecollection.root.children.left.known) || !(basecollection.root.children.right.known) {
         test.Error("[collection.go]", "[known]", "New collection has unknown nodes.")
     }
@@ -77,6 +81,10 @@ func TestCollectionEmptyCollection(test *testing.T) {
 func TestCollectionEmptyVerifier(test *testing.T) {
     basecollection := EmptyCollection()
     baseverifier := EmptyVerifier()
+
+    if !(baseverifier.AutoCollect.value) {
+        test.Error("[collection.go]", "[autocollect]", "AutoCollect does not have true as default value.")
+    }
 
     if baseverifier.root.known {
         test.Error("[collection.go]", "[known]", "Empty verifier has known root.")

@@ -73,6 +73,31 @@ func TestTransactionRollback(test *testing.T) {
         test.Error("[transaction.go]", "[rollback]", "Fixing after Rollback() has a non-null effect.")
     }
 
+    noautocollect := EmptyCollection()
+    noautocollect.AutoCollect.Disable()
+    noautocollect.Scope.None()
+
+    noautocollect.Begin()
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        noautocollect.Add(key)
+    }
+
+    noautocollect.End()
+
+    if !(noautocollect.root.known) {
+        test.Error("[transaction.go]", "[noautocollect]", "AutoCollect.Disable() seems to have no effect in preventing the collection of nodes after End().")
+    }
+
+    noautocollect.Collect()
+
+    if noautocollect.root.known {
+        test.Error("[transaction.go]", "[noautocollect]", "Collect() has no effect when AutoCollect is disabled.")
+    }
+
     ctx.should_panic("[rollbackagain]", func() {
         collection.Rollback()
     })

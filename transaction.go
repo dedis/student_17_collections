@@ -40,7 +40,10 @@ func (this *collection) End() {
 
     this.confirm()
     this.fix()
-    this.Collect()
+
+    if this.AutoCollect.value {
+        this.Collect()
+    }
 
     this.transaction = false
 }

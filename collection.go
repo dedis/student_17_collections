@@ -13,6 +13,7 @@ type collection struct {
     fields []Field
     Scope scope
 
+    AutoCollect flag
     transaction bool
 }
 
@@ -20,7 +21,9 @@ type collection struct {
 
 func EmptyCollection(fields... Field) (collection collection) {
     collection.fields = fields
+
     collection.Scope.All()
+    collection.AutoCollect.Enable()
 
     collection.root = new(node)
     collection.root.known = true
@@ -35,10 +38,12 @@ func EmptyCollection(fields... Field) (collection collection) {
 }
 
 func EmptyVerifier(fields... Field) (verifier collection) {
-    empty := EmptyCollection(fields...)
-
     verifier.fields = fields
+
     verifier.Scope.None()
+    verifier.AutoCollect.Enable()
+
+    empty := EmptyCollection(fields...)
 
     verifier.root = new(node)
     verifier.root.known = false
