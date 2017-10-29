@@ -5,7 +5,7 @@ import "errors"
 type Same struct {
 }
 
-// Private methods (collection) (manipulators)
+// Methods (collection) (manipulators)
 
 func (this *collection) Add(key []byte, values... interface{}) error {
     if len(values) != len(this.fields) {
