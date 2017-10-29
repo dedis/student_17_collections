@@ -134,6 +134,56 @@ func TestProofDumpConsistent(test *testing.T) {
     }
 }
 
+func TestProofDumpTo(test *testing.T) {
+    ctx := testctx("[proof.go]", test)
+
+    stake64 := Stake64{}
+    data := Data{}
+
+    collection := EmptyCollection(stake64, data)
+    collection.Add([]byte("mykey"), uint64(66), []byte("myvalue"))
+
+    rootdump := dumpnode(collection.root)
+    leftdump := dumpnode(collection.root.children.left)
+    rightdump := dumpnode(collection.root.children.right)
+
+    unknown := EmptyCollection(stake64, data)
+    unknown.Scope.None()
+
+    unknown.Begin()
+    unknown.Add([]byte("mykey"), uint64(66), []byte("myvalue"))
+    unknown.End()
+
+    rootdump.to(unknown.root)
+
+    if (unknown.root.children.left == nil) || (unknown.root.children.right == nil) {
+        test.Error("[proof.go]", "[to]", "Method to() does not branch internal nodes.")
+    }
+
+    leftdump.to(unknown.root.children.left)
+    rightdump.to(unknown.root.children.right)
+
+    if unknown.root.label != collection.root.label {
+        test.Error("[proof.go]", "[to]", "Method to() corrupts the label of an internal node.")
+    }
+
+    unknown.fix()
+
+    if unknown.root.label != collection.root.label {
+        test.Error("[proof.go]", "[to]", "Fixing a collection expanded from dumps has a non-null effect on the root label.")
+    }
+
+    ctx.verify.tree("[to]", &unknown)
+
+    leftdump.to(unknown.root.children.right)
+    unknown.fix()
+    ctx.verify.tree("[to]", &unknown)
+
+    if unknown.root.label != collection.root.label {
+        test.Error("[proof.go]", "[to]", "Method to() has non-null effect when used on node with non-matching label.")
+    }
+}
+
 func TestProofGetters(test *testing.T) {
     proof := Proof{}
     proof.key = []byte("mykey")

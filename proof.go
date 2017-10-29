@@ -20,13 +20,12 @@ type dump struct {
 // Constructors
 
 func dumpnode(node *node) (dump dump) {
+    dump.label = node.label
+    dump.values = node.values
+
     if node.leaf() {
-        dump.label = node.label
         dump.key = node.key
-        dump.values = node.values
     } else {
-        dump.label = node.label
-        dump.values = node.values
         dump.children.left = node.children.left.label
         dump.children.right = node.children.right.label
     }
@@ -48,6 +47,25 @@ func (this *dump) consistent() bool {
         return this.label == sha256(true, this.key[:], this.values)
     } else {
         return this.label == sha256(false, this.values, this.children.left[:], this.children.right[:])
+    }
+}
+
+func (this *dump) to(node *node) {
+    if !(node.known) && (node.label == this.label) {
+        node.label = this.label
+        node.values = this.values
+
+        if this.leaf() {
+            node.key = this.key
+        } else {
+            node.branch()
+
+            node.children.left.known = false
+            node.children.right.known = false
+
+            node.children.left.label = this.children.left
+            node.children.right.label = this.children.right
+        }
     }
 }
 
