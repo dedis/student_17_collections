@@ -267,3 +267,147 @@ func TestProofMatchValues(test *testing.T) {
         test.Error("[proof.go]", "[values]", "Proof Values() does not yield an error on a proof with no steps.")
     }
 }
+
+func TestProofConsistent(test *testing.T) {
+    stake64 := Stake64{}
+    collection := EmptyCollection(stake64)
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Add(key, uint64(index))
+    }
+
+    key := make([]byte, 8)
+    proof, _ := collection.Get(key).Proof()
+
+    if !(proof.consistent()) {
+        test.Error("[proof.go]", "[consistent]", "Proof produced by collection is not consistent.")
+    }
+
+    proof.root.label[0]++
+    if proof.consistent() {
+        test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of root node.")
+    }
+    proof.root.label[0]--
+
+    proof.root.values[0][0]++
+    if proof.consistent() {
+        test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering values of root node.")
+    }
+    proof.root.values[0][0]--
+
+    proof.root.children.left[0]++
+    if proof.consistent() {
+        test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of left child of root node.")
+    }
+    proof.root.children.left[0]--
+
+    proof.root.children.right[0]++
+    if proof.consistent() {
+        test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of root node.")
+    }
+    proof.root.children.right[0]--
+
+    stepsbackup := proof.steps
+    proof.steps = []step{}
+    if proof.consistent() {
+        test.Error("[proof.go]", "[consistent]", "Proof with no steps is still consisetent.")
+    }
+    proof.steps = stepsbackup
+
+    for index := 0; index < len(proof.steps); index++ {
+        step := &(proof.steps[index])
+
+        step.left.label[0]++
+        if proof.consistent() {
+            test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of one of left steps.")
+        }
+        step.left.label[0]--
+
+        step.right.label[0]++
+        if proof.consistent() {
+            test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of one of right steps.")
+        }
+        step.right.label[0]--
+
+        step.left.values[0][0]++
+        if proof.consistent() {
+            test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering value of one of left steps.")
+        }
+        step.left.values[0][0]--
+
+        step.right.values[0][0]++
+        if proof.consistent() {
+            test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering value of one of right steps.")
+        }
+        step.right.values[0][0]--
+
+        if step.left.leaf() {
+            placeholder := (len(step.left.key) == 0)
+            if !placeholder {
+                step.left.key[0]++
+            } else {
+                step.left.key = []byte("x")
+            }
+
+            if proof.consistent() {
+                test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering key of one of left leaf steps.")
+            }
+
+            if !placeholder {
+                step.left.key[0]--
+            } else {
+                step.left.key = []byte{}
+            }
+        } else {
+            step.left.children.left[0]++
+            if proof.consistent() {
+                test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering left child of one of left internal node steps.")
+            }
+            step.left.children.left[0]--
+
+            step.left.children.right[0]++
+            if proof.consistent() {
+                test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering right child of one of left internal node steps.")
+            }
+            step.left.children.right[0]--
+        }
+
+        if step.right.leaf() {
+            placeholder := (len(step.right.key) == 0)
+            if !placeholder {
+                step.right.key[0]++
+            } else {
+                step.right.key = []byte("x")
+            }
+
+            if proof.consistent() {
+                test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering key of one of right leaf steps.")
+            }
+
+            if !placeholder {
+                step.right.key[0]--
+            } else {
+                step.right.key = []byte{}
+            }
+        } else {
+            step.right.children.left[0]++
+            if proof.consistent() {
+                test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering left child of one of right internal node steps.")
+            }
+            step.right.children.left[0]--
+
+            step.right.children.right[0]++
+            if proof.consistent() {
+                test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering right child of one of right internal node steps.")
+            }
+            step.right.children.right[0]--
+        }
+    }
+
+    if !(proof.consistent()) {
+        test.Error("[proof.go]", "[consistent]", "Proof is not consistent after reversing all the updates, check test.")
+    }
+}

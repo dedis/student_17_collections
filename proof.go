@@ -63,7 +63,7 @@ type step struct {
 type Proof struct {
     collection *collection
     key []byte
-    
+
     root dump
     steps []step
 }
@@ -135,4 +135,37 @@ func (this *Proof) Values() ([]interface{}, error) {
     }
 
     return values, nil
+}
+
+// Private methods
+
+func (this *Proof) consistent() bool {
+    if len(this.steps) == 0 {
+        return false
+    }
+
+    if !(this.root.consistent()) {
+        return false
+    }
+
+    cursor := &(this.root)
+    path := sha256(this.key)
+
+    for depth := 0; depth < len(this.steps); depth++ {
+        if (cursor.children.left != this.steps[depth].left.label) || (cursor.children.right != this.steps[depth].right.label) {
+            return false
+        }
+
+        if !(this.steps[depth].left.consistent()) || !(this.steps[depth].right.consistent()) {
+            return false
+        }
+
+        if bit(path[:], depth) {
+            cursor = &(this.steps[depth].right)
+        } else {
+            cursor = &(this.steps[depth].left)
+        }
+    }
+
+    return cursor.leaf()
 }
