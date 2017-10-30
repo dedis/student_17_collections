@@ -156,12 +156,24 @@ func TestProofDumpTo(test *testing.T) {
 
     rootdump.to(unknown.root)
 
+    if !(unknown.root.known) {
+        test.Error("[proof.go]", "[to]", "Method to() does not set known to true.")
+    }
+
     if (unknown.root.children.left == nil) || (unknown.root.children.right == nil) {
         test.Error("[proof.go]", "[to]", "Method to() does not branch internal nodes.")
     }
 
     leftdump.to(unknown.root.children.left)
     rightdump.to(unknown.root.children.right)
+
+    if !(unknown.root.children.left.known) {
+        test.Error("[proof.go]", "[to]", "Method to() does not set known to true.")
+    }
+
+    if !(unknown.root.children.right.known) {
+        test.Error("[proof.go]", "[to]", "Method to() does not set known to true.")
+    }
 
     if unknown.root.label != collection.root.label {
         test.Error("[proof.go]", "[to]", "Method to() corrupts the label of an internal node.")

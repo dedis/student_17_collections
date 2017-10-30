@@ -52,6 +52,7 @@ func (this *dump) consistent() bool {
 
 func (this *dump) to(node *node) {
     if !(node.known) && (node.label == this.label) {
+        node.known = true
         node.label = this.label
         node.values = this.values
 
