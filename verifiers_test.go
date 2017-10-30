@@ -45,4 +45,19 @@ func TestVerifiersVerify(test *testing.T) {
 
         ctx.verify.values("[verify]", &unknown, key, uint64(index), key)
     }
+
+    proof, _ := collection.Get(make([]byte, 8)).Proof()
+    proof.steps[0].left.label[0]++
+
+    if unknown.Verify(proof) {
+        test.Error("[verifiers.go]", "[verify]", "Verify() accepts an inconsistent proof.")
+    }
+
+    collection.Add([]byte("mykey"), uint64(1066), []byte("myvalue"))
+
+    proof, _ = collection.Get(make([]byte, 8)).Proof()
+
+    if unknown.Verify(proof) {
+        test.Error("[verifiers.go]", "[verify]", "Verify() accepts a consistent proof from a wrong root.")
+    }
 }
