@@ -1,11 +1,5 @@
 package collection
 
-// Interfaces
-
-type Collection interface {
-    // TODO: Add interface items here.
-}
-
 // Structs
 
 type collection struct {
