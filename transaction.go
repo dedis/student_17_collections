@@ -5,15 +5,15 @@ import csha256 "crypto/sha256"
 // Methods (collection) (transaction methods)
 
 func (this *collection) Begin() {
-    if this.transaction {
+    if this.transaction.ongoing {
         panic("Transaction already in progress.")
     }
 
-    this.transaction = true
+    this.transaction.ongoing = true
 }
 
 func (this *collection) Rollback() {
-    if !(this.transaction) {
+    if !(this.transaction.ongoing) {
         panic("Transaction not in progress")
     }
 
@@ -30,11 +30,11 @@ func (this *collection) Rollback() {
     }
 
     explore(this.root)
-    this.transaction = false
+    this.transaction.ongoing = false
 }
 
 func (this *collection) End() {
-    if !(this.transaction) {
+    if !(this.transaction.ongoing) {
         panic("Transaction not in progress.")
     }
 
@@ -45,7 +45,7 @@ func (this *collection) End() {
         this.Collect()
     }
 
-    this.transaction = false
+    this.transaction.ongoing = false
 }
 
 func (this *collection) Collect() {

@@ -52,7 +52,7 @@ func TestManipulatorsAdd(test *testing.T) {
 
     transaction := EmptyCollection(stake64)
     transaction.Scope.None()
-    transaction.transaction = true
+    transaction.transaction.ongoing = true
 
     for index := 0; index < 512; index++ {
         key := make([]byte, 8)
@@ -127,7 +127,7 @@ func TestManipulatorsSet(test *testing.T) {
 
     transaction := EmptyCollection(stake64)
     transaction.Scope.None()
-    transaction.transaction = true
+    transaction.transaction.ongoing = true
 
     for index := 0; index < 512; index++ {
         key := make([]byte, 8)
@@ -253,7 +253,7 @@ func TestManipulatorsRemove(test *testing.T) {
     }
 
     transaction.Scope.None()
-    transaction.transaction = true
+    transaction.transaction.ongoing = true
 
     for index := 0; index < 512; index += 2 {
         key := make([]byte, 8)
@@ -303,7 +303,7 @@ func TestManipulatorsRemove(test *testing.T) {
 
     transaction.fix()
     transaction.Collect()
-    transaction.transaction = false
+    transaction.transaction.ongoing = false
 
     empty := EmptyCollection()
     if transaction.root.label != empty.root.label {

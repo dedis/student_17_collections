@@ -8,7 +8,9 @@ type collection struct {
     Scope scope
 
     AutoCollect flag
-    transaction bool
+    transaction struct {
+        ongoing bool
+    }
 }
 
 // Constructors

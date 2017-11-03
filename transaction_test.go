@@ -9,7 +9,7 @@ func TestTransactionBegin(test *testing.T) {
     collection := EmptyCollection()
     collection.Begin()
 
-    if !(collection.transaction) {
+    if !(collection.transaction.ongoing) {
         test.Error("[transaction.go]", "[begin]", "Begin() does not set the transaction flag.")
     }
 
@@ -189,7 +189,7 @@ func TestTransactionCollect(test *testing.T) {
     collection.Scope.Add([]byte{0xff}, 3)
     collection.Scope.Add([]byte{0xd2}, 6)
 
-    collection.transaction = true
+    collection.transaction.ongoing = true
 
     for index := 0; index < 512; index++ {
         key := make([]byte, 8)
@@ -200,7 +200,7 @@ func TestTransactionCollect(test *testing.T) {
 
     collection.fix()
     collection.Collect()
-    collection.transaction = false
+    collection.transaction.ongoing = false
 
     ctx.verify.scope("[collect]", &collection)
 
@@ -226,8 +226,8 @@ func TestTransactionConfirm(test *testing.T) {
     collection := EmptyCollection()
     reference := EmptyCollection()
 
-    collection.transaction = true
-    reference.transaction = true
+    collection.transaction.ongoing = true
+    reference.transaction.ongoing = true
 
     for index := 0; index < 512; index++ {
         key := make([]byte, 8)

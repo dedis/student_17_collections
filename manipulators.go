@@ -41,7 +41,7 @@ func (this *collection) Add(key []byte, values... interface{}) error {
         }
 
         if cursor.placeholder() {
-            if this.transaction {
+            if this.transaction.ongoing {
                 cursor.backup()
             }
 
@@ -59,7 +59,7 @@ func (this *collection) Add(key []byte, values... interface{}) error {
             collisionpath := sha256(collision.key)
             collisionstep := bit(collisionpath[:], depth)
 
-            if this.transaction {
+            if this.transaction.ongoing {
                 cursor.backup()
             }
 
@@ -91,14 +91,14 @@ func (this *collection) Add(key []byte, values... interface{}) error {
 
         cursor = cursor.parent
 
-        if this.transaction {
+        if this.transaction.ongoing {
             cursor.transaction.inconsistent = true
         } else {
             this.update(cursor)
         }
     }
 
-    if !(this.transaction) {
+    if !(this.transaction.ongoing) {
         this.Collect()
     }
 
@@ -137,7 +137,7 @@ func (this *collection) Set(key []byte, values... interface{}) error {
             if !(equal(cursor.key, key)) {
                 return errors.New("Key not found.")
             } else {
-                if this.transaction {
+                if this.transaction.ongoing {
                     cursor.backup()
                 }
 
@@ -163,14 +163,14 @@ func (this *collection) Set(key []byte, values... interface{}) error {
 
         cursor = cursor.parent
 
-        if this.transaction {
+        if this.transaction.ongoing {
             cursor.transaction.inconsistent = true
         } else {
             this.update(cursor)
         }
     }
 
-    if !(this.transaction) {
+    if !(this.transaction.ongoing) {
         this.Collect()
     }
 
@@ -222,7 +222,7 @@ func (this *collection) Remove(key []byte) error {
             if !(equal(cursor.key, key)) {
                 return errors.New("Key not found.")
             } else {
-                if this.transaction {
+                if this.transaction.ongoing {
                     cursor.backup()
                 }
 
@@ -240,7 +240,7 @@ func (this *collection) Remove(key []byte) error {
         cursor = cursor.parent
 
         if (cursor.parent != nil) && ((cursor.children.left.placeholder() && cursor.children.right.leaf()) || (cursor.children.right.placeholder() && cursor.children.left.leaf())) {
-            if this.transaction {
+            if this.transaction.ongoing {
                 cursor.backup()
             }
 
@@ -256,7 +256,7 @@ func (this *collection) Remove(key []byte) error {
 
             cursor.prune()
         } else {
-            if this.transaction {
+            if this.transaction.ongoing {
                 cursor.transaction.inconsistent = true
             } else {
                 this.update(cursor)
@@ -264,7 +264,7 @@ func (this *collection) Remove(key []byte) error {
         }
     }
 
-    if !(this.transaction) {
+    if !(this.transaction.ongoing) {
         this.Collect()
     }
 
