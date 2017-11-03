@@ -10,6 +10,7 @@ type collection struct {
     AutoCollect flag
     transaction struct {
         ongoing bool
+        id uint64
     }
 }
 

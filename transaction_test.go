@@ -60,7 +60,14 @@ func TestTransactionRollback(test *testing.T) {
         collection.Remove(key)
     }
 
+    idbefore := collection.transaction.id
     collection.Rollback()
+    idafter := collection.transaction.id
+
+    if idafter != idbefore + 1 {
+        test.Error("[transaction.go]", "[rollback]", "Rollback() does not increment the transaction id.")
+    }
+
     ctx.verify.tree("[rollback]", &collection)
 
     if collection.root.label != reference.root.label {
@@ -132,7 +139,13 @@ func TestTransactionEnd(test *testing.T) {
         collection.Remove(key)
     }
 
+    idbefore := collection.transaction.id
     collection.End()
+    idafter := collection.transaction.id
+
+    if idafter != idbefore + 1 {
+        test.Error("[transaction.go]", "[end]", "End() does not increment transaction id.")
+    }
 
     ctx.verify.tree("[end]", &collection)
 

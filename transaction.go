@@ -30,6 +30,8 @@ func (this *collection) Rollback() {
     }
 
     explore(this.root)
+
+    this.transaction.id++
     this.transaction.ongoing = false
 }
 
@@ -45,6 +47,7 @@ func (this *collection) End() {
         this.Collect()
     }
 
+    this.transaction.id++
     this.transaction.ongoing = false
 }
 
