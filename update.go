@@ -24,6 +24,12 @@ type ReadWrite interface {
 
 // Structs
 
+type Update struct {
+    transaction uint64
+    update userupdate
+    proxy proxy
+}
+
 type proxy struct {
     collection *collection
     paths map[[csha256.Size]byte]bool
