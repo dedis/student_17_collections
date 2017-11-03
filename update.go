@@ -4,7 +4,7 @@ import csha256 "crypto/sha256"
 
 // Interfaces
 
-type Update interface {
+type userupdate interface {
     Records() []Proof
     Check(ReadOnly) bool
     Apply(ReadWrite)
