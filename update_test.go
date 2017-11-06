@@ -447,6 +447,15 @@ func TestUpdateApplyUserUpdate(test *testing.T) {
         test.Error("[update.go]", "[applyuserupdate]", "applyuserupdate() does not apply the update.")
     }
 
+    aliceproof, _ = collection.Get([]byte("alice")).Proof()
+    aliceproof.steps[0].left.label[0]++
+
+    error = collection.Apply(TestUpdateSingleRecordUpdate{aliceproof})
+
+    if error == nil {
+        test.Error("[update.go]", "[applyuserupdate]", "applyuserupdate() does not yield an error when applying an invalid user update.")
+    }
+
     johnproof, _ := collection.Get([]byte("john")).Proof()
     error = collection.Apply(TestUpdateSingleRecordUpdate{johnproof})
 
