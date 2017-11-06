@@ -89,13 +89,13 @@ type Proof struct {
 
 // Getters
 
-func (this *Proof) Key() []byte {
+func (this Proof) Key() []byte {
     return this.key
 }
 
 // Methods
 
-func (this *Proof) Match() bool {
+func (this Proof) Match() bool {
     if len(this.steps) == 0 {
         return false
     }
@@ -110,7 +110,7 @@ func (this *Proof) Match() bool {
     }
 }
 
-func (this *Proof) Values() ([]interface{}, error) {
+func (this Proof) Values() ([]interface{}, error) {
     if len(this.steps) == 0 {
         return []interface{}{}, errors.New("Proof has no steps.")
     }
@@ -158,7 +158,7 @@ func (this *Proof) Values() ([]interface{}, error) {
 
 // Private methods
 
-func (this *Proof) consistent() bool {
+func (this Proof) consistent() bool {
     if len(this.steps) == 0 {
         return false
     }

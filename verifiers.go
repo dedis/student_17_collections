@@ -3,6 +3,10 @@ package collection
 // Methods (collection) (verifiers)
 
 func (this *collection) Verify(proof Proof) bool {
+    if this.root.transaction.inconsistent {
+        panic("Verify() called on inconsistent root.")
+    }
+
     if (proof.root.label != this.root.label) || !(proof.consistent()) {
         return false
     }

@@ -1,5 +1,6 @@
 package collection
 
+import "errors"
 import csha256 "crypto/sha256"
 
 // Interfaces
@@ -34,6 +35,8 @@ type proxy struct {
     collection *collection
     paths map[[csha256.Size]byte]bool
 }
+
+// proxy
 
 // Constructors
 
@@ -96,4 +99,69 @@ func (this proxy) Remove(key []byte) error {
 func (this proxy) has(key []byte) bool {
     path := sha256(key)
     return this.paths[path]
+}
+
+// collection
+
+// Methods (collection) (update)
+
+func (this *collection) Prepare(update userupdate) (Update, error) {
+    if this.root.transaction.inconsistent {
+        panic("Prepare() called on inconsistent root.")
+    }
+
+    proofs := update.Records()
+    keys := make([][]byte, len(proofs))
+
+    for index := 0; index < len(proofs); index++ {
+        if !(this.Verify(proofs[index])) {
+            return Update{}, errors.New("Invalid update: proof invalid.")
+        }
+
+        keys[index] = proofs[index].Key()
+    }
+
+    return Update{this.transaction.id, update, this.proxy(keys)}, nil
+}
+
+func (this *collection) Apply(object interface{}) error {
+    switch update := object.(type) {
+    case Update:
+        return this.applyupdate(update)
+    case userupdate:
+        return this.applyuserupdate(update)
+    }
+
+    panic("Apply() only accepts Update objects or objects that implement the update interface.")
+}
+
+// Private methods (collection) (update)
+
+func (this *collection) applyupdate(update Update) error {
+    if update.transaction != this.transaction.id {
+        panic("Update was not prepared during the current transaction.")
+    }
+
+    if !(update.update.Check(update.proxy)) {
+        return errors.New("Update check failed.")
+    }
+
+    if this.transaction.ongoing {
+        update.update.Apply(update.proxy)
+    } else {
+        this.Begin()
+        update.update.Apply(update.proxy)
+        this.End()
+    }
+
+    return nil
+}
+
+func (this *collection) applyuserupdate(update userupdate) error {
+    preparedupdate, err := this.Prepare(update)
+    if err != nil {
+        return err
+    }
+
+    return this.Apply(preparedupdate)
 }

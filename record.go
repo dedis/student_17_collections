@@ -22,15 +22,15 @@ func recordmismatch(collection *collection, key []byte) Record {
 
 // Getters
 
-func (this *Record) Match() bool {
+func (this Record) Match() bool {
     return this.match
 }
 
-func (this *Record) Key() []byte {
+func (this Record) Key() []byte {
     return this.key
 }
 
-func (this *Record) Values() ([]interface{}, error) {
+func (this Record) Values() ([]interface{}, error) {
     if !(this.match) {
         return []interface{}{}, errors.New("No match found.")
     }

@@ -60,4 +60,9 @@ func TestVerifiersVerify(test *testing.T) {
     if unknown.Verify(proof) {
         test.Error("[verifiers.go]", "[verify]", "Verify() accepts a consistent proof from a wrong root.")
     }
+
+    collection.root.transaction.inconsistent = true
+    ctx.should_panic("[verify]", func() {
+        collection.Verify(proof)
+    });
 }
