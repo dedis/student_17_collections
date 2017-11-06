@@ -132,3 +132,37 @@ func TestScopeMatch(test *testing.T) {
         test.Error("[scope.go]", "[match]", "Scope match fails on matching mask.")
     }
 }
+
+func TestScopeClone(test *testing.T) {
+    scope := scope{}
+    scope.All()
+
+    path, _ := hex.DecodeString("fa91")
+    scope.Add(path, 5)
+
+    path, _ = hex.DecodeString("0987654321")
+    scope.Add(path, 37)
+
+    path, _ = hex.DecodeString("1234567890")
+    scope.Add(path, 42)
+
+    clone := scope.clone()
+
+    if !(clone.all) {
+        test.Error("[scope.go]", "[clone]", "clone() does not copy all flag.")
+    }
+
+    if len(clone.masks) != len(scope.masks) {
+        test.Error("[scope.go]", "[clone]", "clone() does not copy the correct number of masks")
+    }
+
+    for index := 0; index < len(clone.masks); index++ {
+        if clone.masks[index].bits != scope.masks[index].bits {
+            test.Error("[scope.go]", "[clone]", "clone() does not properly copy the number of bits in a mask.")
+        }
+
+        if !equal(clone.masks[index].value, scope.masks[index].value) {
+            test.Error("[scope.go]", "[clone]", "clone() does not properly copy the mask value.")
+        }
+    }
+}

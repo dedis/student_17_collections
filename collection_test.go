@@ -1,6 +1,7 @@
 package collection
 
 import "testing"
+import "encoding/binary"
 
 func TestCollectionEmptyCollection(test *testing.T) {
     ctx := testctx("[collection.go]", test)
@@ -131,4 +132,37 @@ func TestCollectionEmptyVerifier(test *testing.T) {
     if stakedataverifier.root.label != stakedatacollection.root.label {
         test.Error("[collection.go]", "[label]", "Wrong stake and data verifier label.")
     }
+}
+
+func TestCollectionClone(test *testing.T) {
+    ctx := testctx("[collection.go]", test)
+
+    stake64 := Stake64{}
+    data := Data{}
+
+    collection := EmptyCollection(stake64, data)
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Add(key, uint64(index), key)
+    }
+
+    clone := collection.Clone()
+
+    ctx.verify.tree("[clone]", &clone)
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        ctx.verify.values("[clone]", &clone, key, uint64(index), key)
+    }
+
+    ctx.should_panic("[clone]", func() {
+        collection.Begin()
+        collection.Clone()
+        collection.End()
+    })
 }

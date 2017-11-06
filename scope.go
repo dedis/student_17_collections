@@ -57,3 +57,11 @@ func (this *scope) match(path [csha256.Size]byte, bits int) bool {
 
     return false
 }
+
+func (this *scope) clone() (scope scope) {
+    scope.masks = make([]mask, len(this.masks))
+    copy(scope.masks, this.masks)
+    scope.all = this.all
+
+    return
+}
