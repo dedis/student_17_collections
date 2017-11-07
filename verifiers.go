@@ -7,7 +7,7 @@ func (this *collection) Verify(proof Proof) bool {
         panic("Verify() called on inconsistent root.")
     }
 
-    if (proof.root.label != this.root.label) || !(proof.consistent()) {
+    if (proof.root.Label != this.root.label) || !(proof.consistent()) {
         return false
     }
 
@@ -20,11 +20,11 @@ func (this *collection) Verify(proof Proof) bool {
 
     for depth := 0; depth < len(proof.steps); depth++ {
         if !(cursor.children.left.known) {
-            proof.steps[depth].left.to(cursor.children.left)
+            proof.steps[depth].Left.to(cursor.children.left)
         }
 
         if !(cursor.children.right.known) {
-            proof.steps[depth].right.to(cursor.children.right)
+            proof.steps[depth].Right.to(cursor.children.right)
         }
 
         if bit(path[:], depth) {

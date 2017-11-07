@@ -13,23 +13,23 @@ func TestProofDumpNode(test *testing.T) {
 
     rootdump := dumpnode(collection.root)
 
-    if rootdump.label != collection.root.label {
+    if rootdump.Label != collection.root.label {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets wrong label on dump of internal node.")
     }
 
-    if len(rootdump.key) != 0 {
+    if len(rootdump.Key) != 0 {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets key on internal node.")
     }
 
-    if len(rootdump.values) != 2 {
+    if len(rootdump.Values) != 2 {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets the wrong number of values on internal node.")
     }
 
-    if !equal(rootdump.values[0], collection.root.values[0]) || !equal(rootdump.values[1], collection.root.values[1]) {
+    if !equal(rootdump.Values[0], collection.root.values[0]) || !equal(rootdump.Values[1], collection.root.values[1]) {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets the wrong values on internal node.")
     }
 
-    if (rootdump.children.left != collection.root.children.left.label) || (rootdump.children.right != collection.root.children.right.label) {
+    if (rootdump.Children.Left != collection.root.children.left.label) || (rootdump.Children.Right != collection.root.children.right.label) {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets the wrong children labels on internal node.")
     }
 
@@ -43,25 +43,25 @@ func TestProofDumpNode(test *testing.T) {
 
     leafdump := dumpnode(leaf)
 
-    if leafdump.label != leaf.label {
+    if leafdump.Label != leaf.label {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets wrong label on dump of leaf.")
     }
 
-    if !equal(leafdump.key, leaf.key) {
+    if !equal(leafdump.Key, leaf.key) {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets wrong key on leaf.")
     }
 
-    if len(leafdump.values) != 2 {
+    if len(leafdump.Values) != 2 {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets the wrong number of values on leaf.")
     }
 
-    if !equal(leafdump.values[0], leaf.values[0]) || !equal(leafdump.values[1], leaf.values[1]) {
+    if !equal(leafdump.Values[0], leaf.values[0]) || !equal(leafdump.Values[1], leaf.values[1]) {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets the wrong values on leaf.")
     }
 
     var empty [csha256.Size]byte
 
-    if (leafdump.children.left != empty) || (leafdump.children.right != empty) {
+    if (leafdump.Children.Left != empty) || (leafdump.Children.Right != empty) {
         test.Error("[proof.go]", "[dumpnode]", "dumpnode() sets non-null children labels on leaf.")
     }
 }
@@ -117,7 +117,7 @@ func TestProofDumpConsistent(test *testing.T) {
         test.Error("[proof.go]", "[consistent]", "consistent() returns false on valid internal node.")
     }
 
-    rootdump.label[0]++
+    rootdump.Label[0]++
 
     if rootdump.consistent() {
         test.Error("[proof.go]", "[consistent]", "consistent() returns true on invalid internal node.")
@@ -127,7 +127,7 @@ func TestProofDumpConsistent(test *testing.T) {
         test.Error("[proof.go]", "[consistent]", "consistent() returns false on valid leaf.")
     }
 
-    leafdump.label[0]++
+    leafdump.Label[0]++
 
     if leafdump.consistent() {
         test.Error("[proof.go]", "[consistent]", "consistent() returns true on invalid leaf.")
@@ -299,8 +299,8 @@ func TestProofMatchValues(test *testing.T) {
 
     proof.key = firstkey
 
-    proof.steps[5].left.values[0] = make([]byte, 7)
-    proof.steps[5].right.values[0] = make([]byte, 7)
+    proof.steps[5].Left.Values[0] = make([]byte, 7)
+    proof.steps[5].Right.Values[0] = make([]byte, 7)
 
     _, err = proof.Values()
 
@@ -308,8 +308,8 @@ func TestProofMatchValues(test *testing.T) {
         test.Error("[proof.go]", "[values]", "Proof Values() does not yield an error on a record with ill-formed values.")
     }
 
-    proof.steps[5].left.values = [][]byte{make([]byte, 8)}
-    proof.steps[5].left.values = [][]byte{make([]byte, 8)}
+    proof.steps[5].Left.Values = [][]byte{make([]byte, 8)}
+    proof.steps[5].Left.Values = [][]byte{make([]byte, 8)}
 
     _, err = proof.Values()
 
@@ -348,29 +348,29 @@ func TestProofConsistent(test *testing.T) {
         test.Error("[proof.go]", "[consistent]", "Proof produced by collection is not consistent.")
     }
 
-    proof.root.label[0]++
+    proof.root.Label[0]++
     if proof.consistent() {
         test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of root node.")
     }
-    proof.root.label[0]--
+    proof.root.Label[0]--
 
-    proof.root.values[0][0]++
+    proof.root.Values[0][0]++
     if proof.consistent() {
         test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering values of root node.")
     }
-    proof.root.values[0][0]--
+    proof.root.Values[0][0]--
 
-    proof.root.children.left[0]++
+    proof.root.Children.Left[0]++
     if proof.consistent() {
         test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of left child of root node.")
     }
-    proof.root.children.left[0]--
+    proof.root.Children.Left[0]--
 
-    proof.root.children.right[0]++
+    proof.root.Children.Right[0]++
     if proof.consistent() {
         test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of root node.")
     }
-    proof.root.children.right[0]--
+    proof.root.Children.Right[0]--
 
     stepsbackup := proof.steps
     proof.steps = []step{}
@@ -382,36 +382,36 @@ func TestProofConsistent(test *testing.T) {
     for index := 0; index < len(proof.steps); index++ {
         step := &(proof.steps[index])
 
-        step.left.label[0]++
+        step.Left.Label[0]++
         if proof.consistent() {
             test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of one of left steps.")
         }
-        step.left.label[0]--
+        step.Left.Label[0]--
 
-        step.right.label[0]++
+        step.Right.Label[0]++
         if proof.consistent() {
             test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering label of one of right steps.")
         }
-        step.right.label[0]--
+        step.Right.Label[0]--
 
-        step.left.values[0][0]++
+        step.Left.Values[0][0]++
         if proof.consistent() {
             test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering value of one of left steps.")
         }
-        step.left.values[0][0]--
+        step.Left.Values[0][0]--
 
-        step.right.values[0][0]++
+        step.Right.Values[0][0]++
         if proof.consistent() {
             test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering value of one of right steps.")
         }
-        step.right.values[0][0]--
+        step.Right.Values[0][0]--
 
-        if step.left.leaf() {
-            placeholder := (len(step.left.key) == 0)
+        if step.Left.leaf() {
+            placeholder := (len(step.Left.Key) == 0)
             if !placeholder {
-                step.left.key[0]++
+                step.Left.Key[0]++
             } else {
-                step.left.key = []byte("x")
+                step.Left.Key = []byte("x")
             }
 
             if proof.consistent() {
@@ -419,30 +419,30 @@ func TestProofConsistent(test *testing.T) {
             }
 
             if !placeholder {
-                step.left.key[0]--
+                step.Left.Key[0]--
             } else {
-                step.left.key = []byte{}
+                step.Left.Key = []byte{}
             }
         } else {
-            step.left.children.left[0]++
+            step.Left.Children.Left[0]++
             if proof.consistent() {
                 test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering left child of one of left internal node steps.")
             }
-            step.left.children.left[0]--
+            step.Left.Children.Left[0]--
 
-            step.left.children.right[0]++
+            step.Left.Children.Right[0]++
             if proof.consistent() {
                 test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering right child of one of left internal node steps.")
             }
-            step.left.children.right[0]--
+            step.Left.Children.Right[0]--
         }
 
-        if step.right.leaf() {
-            placeholder := (len(step.right.key) == 0)
+        if step.Right.leaf() {
+            placeholder := (len(step.Right.Key) == 0)
             if !placeholder {
-                step.right.key[0]++
+                step.Right.Key[0]++
             } else {
-                step.right.key = []byte("x")
+                step.Right.Key = []byte("x")
             }
 
             if proof.consistent() {
@@ -450,22 +450,22 @@ func TestProofConsistent(test *testing.T) {
             }
 
             if !placeholder {
-                step.right.key[0]--
+                step.Right.Key[0]--
             } else {
-                step.right.key = []byte{}
+                step.Right.Key = []byte{}
             }
         } else {
-            step.right.children.left[0]++
+            step.Right.Children.Left[0]++
             if proof.consistent() {
                 test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering left child of one of right internal node steps.")
             }
-            step.right.children.left[0]--
+            step.Right.Children.Left[0]--
 
-            step.right.children.right[0]++
+            step.Right.Children.Right[0]++
             if proof.consistent() {
                 test.Error("[proof.go]", "[consistent]", "Proof is still consistent after altering right child of one of right internal node steps.")
             }
-            step.right.children.right[0]--
+            step.Right.Children.Right[0]--
         }
     }
 

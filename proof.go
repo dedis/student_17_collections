@@ -6,28 +6,28 @@ import csha256 "crypto/sha256"
 // dump
 
 type dump struct {
-    label [csha256.Size]byte
+    Label [csha256.Size]byte
 
-    key []byte
-    values [][]byte
+    Key []byte
+    Values [][]byte
 
-    children struct {
-        left [csha256.Size]byte
-        right [csha256.Size]byte
+    Children struct {
+        Left [csha256.Size]byte
+        Right [csha256.Size]byte
     }
 }
 
 // Constructors
 
 func dumpnode(node *node) (dump dump) {
-    dump.label = node.label
-    dump.values = node.values
+    dump.Label = node.label
+    dump.Values = node.values
 
     if node.leaf() {
-        dump.key = node.key
+        dump.Key = node.key
     } else {
-        dump.children.left = node.children.left.label
-        dump.children.right = node.children.right.label
+        dump.Children.Left = node.children.left.label
+        dump.Children.Right = node.children.right.label
     }
 
     return
@@ -37,35 +37,35 @@ func dumpnode(node *node) (dump dump) {
 
 func (this *dump) leaf() bool {
     var empty [csha256.Size]byte
-    return (this.children.left == empty) && (this.children.right == empty)
+    return (this.Children.Left == empty) && (this.Children.Right == empty)
 }
 
 // Methods
 
 func (this *dump) consistent() bool {
     if this.leaf() {
-        return this.label == sha256(true, this.key[:], this.values)
+        return this.Label == sha256(true, this.Key[:], this.Values)
     } else {
-        return this.label == sha256(false, this.values, this.children.left[:], this.children.right[:])
+        return this.Label == sha256(false, this.Values, this.Children.Left[:], this.Children.Right[:])
     }
 }
 
 func (this *dump) to(node *node) {
-    if !(node.known) && (node.label == this.label) {
+    if !(node.known) && (node.label == this.Label) {
         node.known = true
-        node.label = this.label
-        node.values = this.values
+        node.label = this.Label
+        node.values = this.Values
 
         if this.leaf() {
-            node.key = this.key
+            node.key = this.Key
         } else {
             node.branch()
 
             node.children.left.known = false
             node.children.right.known = false
 
-            node.children.left.label = this.children.left
-            node.children.right.label = this.children.right
+            node.children.left.label = this.Children.Left
+            node.children.right.label = this.Children.Right
         }
     }
 }
@@ -73,8 +73,8 @@ func (this *dump) to(node *node) {
 // step
 
 type step struct {
-    left dump
-    right dump
+    Left dump
+    Right dump
 }
 
 // Proof
@@ -104,9 +104,9 @@ func (this Proof) Match() bool {
     depth := len(this.steps) - 1
 
     if bit(path[:], depth) {
-        return equal(this.key, this.steps[depth].right.key)
+        return equal(this.key, this.steps[depth].Right.Key)
     } else {
-        return equal(this.key, this.steps[depth].left.key)
+        return equal(this.key, this.steps[depth].Left.Key)
     }
 }
 
@@ -122,14 +122,14 @@ func (this Proof) Values() ([]interface{}, error) {
     var rawvalues [][]byte
 
     if bit(path[:], depth) {
-        if equal(this.key, this.steps[depth].right.key) {
+        if equal(this.key, this.steps[depth].Right.Key) {
             match = true
-            rawvalues = this.steps[depth].right.values
+            rawvalues = this.steps[depth].Right.Values
         }
     } else {
-        if equal(this.key, this.steps[depth].left.key) {
+        if equal(this.key, this.steps[depth].Left.Key) {
             match = true
-            rawvalues = this.steps[depth].left.values
+            rawvalues = this.steps[depth].Left.Values
         }
     }
 
@@ -171,18 +171,18 @@ func (this Proof) consistent() bool {
     path := sha256(this.key)
 
     for depth := 0; depth < len(this.steps); depth++ {
-        if (cursor.children.left != this.steps[depth].left.label) || (cursor.children.right != this.steps[depth].right.label) {
+        if (cursor.Children.Left != this.steps[depth].Left.Label) || (cursor.Children.Right != this.steps[depth].Right.Label) {
             return false
         }
 
-        if !(this.steps[depth].left.consistent()) || !(this.steps[depth].right.consistent()) {
+        if !(this.steps[depth].Left.consistent()) || !(this.steps[depth].Right.consistent()) {
             return false
         }
 
         if bit(path[:], depth) {
-            cursor = &(this.steps[depth].right)
+            cursor = &(this.steps[depth].Right)
         } else {
-            cursor = &(this.steps[depth].left)
+            cursor = &(this.steps[depth].Left)
         }
     }
 

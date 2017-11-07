@@ -229,7 +229,7 @@ func TestUpdatePrepare(test *testing.T) {
         test.Error("[update.go]", "[prepare]", "Prepare() sets wrong proxy paths.")
     }
 
-    singlerecord.record.steps[0].left.label[0]++
+    singlerecord.record.steps[0].Left.Label[0]++
     _, error = collection.Prepare(singlerecord)
 
     if error == nil {
@@ -266,7 +266,7 @@ func TestUpdatePrepare(test *testing.T) {
         test.Error("[update.go]", "[prepare]", "Prepare() sets wrong proxy paths.")
     }
 
-    doublerecord.from.steps[0].left.label[0]++
+    doublerecord.from.steps[0].Left.Label[0]++
     _, error = collection.Prepare(doublerecord)
 
     if error == nil {
@@ -448,7 +448,7 @@ func TestUpdateApplyUserUpdate(test *testing.T) {
     }
 
     aliceproof, _ = collection.Get([]byte("alice")).Proof()
-    aliceproof.steps[0].left.label[0]++
+    aliceproof.steps[0].Left.Label[0]++
 
     error = collection.Apply(TestUpdateSingleRecordUpdate{aliceproof})
 
