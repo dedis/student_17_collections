@@ -473,3 +473,45 @@ func TestProofConsistent(test *testing.T) {
         test.Error("[proof.go]", "[consistent]", "Proof is not consistent after reversing all the updates, check test.")
     }
 }
+
+func TestProofSerialization(test *testing.T) {
+    stake64 := Stake64{}
+    data := Data{}
+
+    collection := EmptyCollection(stake64, data)
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        collection.Add(key, uint64(index), key)
+    }
+
+    for index := 0; index < 512; index++ {
+        key := make([]byte, 8)
+        binary.BigEndian.PutUint64(key, uint64(index))
+
+        proof, _ := collection.Get(key).Proof()
+        buffer := collection.Serialize(proof)
+
+        otherproof, error := collection.Deserialize(buffer)
+
+        if error != nil {
+            test.Error("[proof.go]", "[serialization]", "Serialize() / Deserialize() yields an error on a valid proof.")
+        }
+
+        if otherproof.collection != &collection {
+            test.Error("[proof.go]", "[serialization]", "Deserialize() does not properly set the collection pointer.")
+        }
+
+        if !(collection.Verify(otherproof)) {
+            test.Error("[proof.go]", "[serialization]", "Serialize() / Deserialize() yields an invalid proof on a valid proof.")
+        }
+    }
+
+    _, error := collection.Deserialize([]byte("definitelynotaproof"))
+
+    if error == nil {
+        test.Error("[proof.go]", "[serialization]", "Deserialize() does not yield an error when provided with an invalid byte slice.")
+    }
+}

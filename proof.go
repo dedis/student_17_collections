@@ -2,14 +2,15 @@ package collection
 
 import "errors"
 import csha256 "crypto/sha256"
+import "github.com/dedis/protobuf"
 
 // dump
 
 type dump struct {
     Label [csha256.Size]byte
 
-    Key []byte
-    Values [][]byte
+    Key []byte `protobuf:"opt"`
+    Values [][]byte `protobuf:"opt"`
 
     Children struct {
         Left [csha256.Size]byte
@@ -187,4 +188,35 @@ func (this Proof) consistent() bool {
     }
 
     return cursor.leaf()
+}
+
+// collection
+
+// Methods (collection) (serialization)
+
+func (this *collection) Serialize(proof Proof) []byte {
+    serializable := struct {
+        Key []byte
+        Root dump
+        Steps []step
+    }{proof.key, proof.root, proof.steps}
+
+    buffer, _ := protobuf.Encode(&serializable)
+    return buffer
+}
+
+func (this *collection) Deserialize(buffer []byte) (Proof, error) {
+    deserializable := struct {
+        Key []byte
+        Root dump
+        Steps []step
+    }{}
+
+    error := protobuf.Decode(buffer, &deserializable)
+
+    if error != nil {
+        return Proof{}, error
+    }
+
+    return Proof{this, deserializable.Key, deserializable.Root, deserializable.Steps}, nil
 }
