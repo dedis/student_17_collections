@@ -4,6 +4,9 @@ import "errors"
 
 type Record struct {
     collection *collection
+
+    field int
+    query []byte
     match bool
 
     key []byte
@@ -12,15 +15,41 @@ type Record struct {
 
 // Constructors
 
-func recordmatch(collection *collection, node *node) Record {
-    return Record{collection, true, node.key, node.values}
+func recordkeymatch(collection *collection, node *node) Record {
+    return Record{collection, 0, []byte{}, true, node.key, node.values}
 }
 
-func recordmismatch(collection *collection, key []byte) Record {
-    return Record{collection, false, key, [][]byte{}}
+func recordquerymatch(collection *collection, field int, query interface{}, node *node) Record {
+    if field >= len(collection.fields) {
+        panic("Field out of range.")
+    }
+
+    return Record{collection, field, collection.fields[field].Encode(query), true, node.key, node.values}
+}
+
+func recordkeymismatch(collection *collection, key []byte) Record {
+    return Record{collection, 0, []byte{}, false, key, [][]byte{}}
 }
 
 // Getters
+
+func (this Record) Query() (interface{}, error) {
+    if len(this.query) == 0 {
+        return nil, errors.New("No query specified.")
+    }
+
+    if len(this.values) <= this.field {
+        return nil, errors.New("Field out of range.")
+    }
+
+    value, err := this.collection.fields[this.field].Decode(this.query)
+
+    if err != nil {
+        return nil, err
+    }
+
+    return value, nil
+}
 
 func (this Record) Match() bool {
     return this.match

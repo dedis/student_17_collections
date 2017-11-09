@@ -28,9 +28,9 @@ func (this getter) Record() (Record, error) {
 
         if cursor.leaf() {
             if equal(cursor.key, this.key) {
-                return recordmatch(this.collection, cursor), nil
+                return recordkeymatch(this.collection, cursor), nil
             } else {
-                return recordmismatch(this.collection, this.key), nil
+                return recordkeymismatch(this.collection, this.key), nil
             }
         } else {
             if bit(path[:], depth) {

@@ -3,6 +3,8 @@ package collection
 import "testing"
 
 func TestRecord(test *testing.T) {
+    ctx := testctx("[record.go]", test)
+
     stake64 := Stake64{}
     data := Data{}
 
@@ -17,70 +19,104 @@ func TestRecord(test *testing.T) {
         leaf = collection.root.children.left
     }
 
-    match := recordmatch(&collection, leaf)
-    mismatch := recordmismatch(&collection, []byte("wrongkey"))
+    keymatch := recordkeymatch(&collection, leaf)
+    querymatch := recordquerymatch(&collection, 0, uint64(99), leaf)
+    keymismatch := recordkeymismatch(&collection, []byte("wrongkey"))
 
-    if (match.collection != &collection) || (mismatch.collection != &collection) {
+    if (keymatch.collection != &collection) || (querymatch.collection != &collection) || (keymismatch.collection != &collection) {
         test.Error("[record.go]", "[constructors]", "Constructors don't set collection appropriately.")
     }
 
-    if !(match.match) || mismatch.match {
+    if !(keymatch.match) || !(querymatch.match) || keymismatch.match {
         test.Error("[record.go]", "[constructors]", "Constructors don't set match appropriately.")
     }
 
-    if !equal(match.key, []byte("mykey")) || !equal(mismatch.key, []byte("wrongkey")) {
+    if !equal(keymatch.key, []byte("mykey")) || !equal(querymatch.key, []byte("mykey")) || !equal(keymismatch.key, []byte("wrongkey")) {
         test.Error("[record.go]", "[constructors]", "Constructors don't set key appropriately")
     }
 
-    if len(match.values) != 2 || len(mismatch.values) != 0 {
+    if len(keymatch.values) != 2 || len(querymatch.values) != 2 || len(keymismatch.values) != 0 {
         test.Error("[record.go]", "[constructors]", "Constructors don't set the appropriate number of values.")
     }
 
-    if !equal(match.values[0], leaf.values[0]) || !equal(match.values[1], leaf.values[1]) {
+    if !equal(keymatch.values[0], leaf.values[0]) || !equal(keymatch.values[1], leaf.values[1]) || !equal(querymatch.values[0], leaf.values[0]) || !equal(querymatch.values[1], leaf.values[1]) {
         test.Error("[record.go]", "[constructors]", "Constructors set the wrong values.")
     }
 
-    if !(match.Match()) || mismatch.Match() {
+    if !(keymatch.Match()) || !(querymatch.Match()) ||  keymismatch.Match() {
         test.Error("[record.go]", "[match]", "Match() returns the wrong value.")
     }
 
-    if !equal(match.Key(), []byte("mykey")) || !equal(mismatch.Key(), []byte("wrongkey")) {
+    if !equal(keymatch.Key(), []byte("mykey")) || !equal(querymatch.Key(), []byte("mykey")) || !equal(keymismatch.Key(), []byte("wrongkey")) {
         test.Error("[record.go]", "[key]", "Key() returns the wrong value.")
     }
 
-    matchvalues, matcherror := match.Values()
+    keymatchvalues, keymatcherror := keymatch.Values()
+    querymatchvalues, querymatcherror := querymatch.Values()
 
-    if matcherror != nil {
+    if (keymatcherror != nil) || (querymatcherror != nil) {
         test.Error("[record.go]", "[values]", "Values() yields an error on matching record.")
     }
 
-    if len(matchvalues) != 2 {
+    if (len(keymatchvalues) != 2) || (len(querymatchvalues) != 2) {
         test.Error("[record.go]", "[values]", "Values() returns the wrong number of values")
     }
 
-    if (matchvalues[0].(uint64) != 66) || !equal(matchvalues[1].([]byte), leaf.values[1]) {
+    if (keymatchvalues[0].(uint64) != 66) || !equal(keymatchvalues[1].([]byte), leaf.values[1]) || (querymatchvalues[0].(uint64) != 66) || !equal(querymatchvalues[1].([]byte), leaf.values[1]){
         test.Error("[record.go]", "[values]", "Values() returns the wrong values.")
     }
 
-    _, mismatcherror := mismatch.Values()
+    _, keymismatcherror := keymismatch.Values()
 
-    if mismatcherror == nil {
+    if keymismatcherror == nil {
         test.Error("[record.go]", "[values]", "Values() does not yield an error on mismatching record.")
     }
 
-    match.values[0] = match.values[0][:6]
+    keymatch.values[0] = keymatch.values[0][:6]
+    querymatch.values[0] = querymatch.values[0][:6]
 
-    _, illformederror := match.Values()
+    _, keyillformederror := keymatch.Values()
+    _, queryillformederror := querymatch.Values()
 
-    if illformederror == nil {
+    if (keyillformederror == nil)  || (queryillformederror) == nil {
         test.Error("[record.go]", "[values]", "Values() does not yield an error on record with ill-formed values.")
     }
 
-    match.values = match.values[:1]
+    keymatch.values = keymatch.values[:1]
+    querymatch.values = querymatch.values[:1]
 
-    _, fewerror := match.Values()
+    _, keyfewerror := keymatch.Values()
+    _, queryfewerror := querymatch.Values()
 
-    if fewerror == nil {
+    if (keyfewerror == nil) || (queryfewerror == nil) {
         test.Error("[record.go]", "[values]", "Values() does not yield an error on record with wrong number of values.")
     }
+
+    _, keymatchqueryerror := keymatch.Query()
+
+    if keymatchqueryerror == nil {
+        test.Error("[record.go]", "[query]", "Query() does not yield an error on a record without query.")
+    }
+
+    querymatchquery, querymatchqueryerror := querymatch.Query()
+
+    if querymatchqueryerror != nil {
+        test.Error("[record.go]", "[query]", "Query() yields an error on a valid record with query.")
+    }
+
+    if querymatchquery.(uint64) != 99 {
+        test.Error("[record.go]", "[query]", "Query() returns wrong query.")
+    }
+
+    querymatch.field = 48
+
+    _, querymatchqueryerror = querymatch.Query()
+
+    if querymatchqueryerror == nil {
+        test.Error("[record.go]", "[query]", "Query() does not yield an error when field is out of range.")
+    }
+
+    ctx.should_panic("[constructors]", func() {
+        recordquerymatch(&collection, 4, uint64(99), leaf)
+    })
 }
