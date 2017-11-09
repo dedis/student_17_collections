@@ -3,8 +3,6 @@ package collection
 import "testing"
 
 func TestRecord(test *testing.T) {
-    ctx := testctx("[record.go]", test)
-
     stake64 := Stake64{}
     data := Data{}
 
@@ -20,7 +18,7 @@ func TestRecord(test *testing.T) {
     }
 
     keymatch := recordkeymatch(&collection, leaf)
-    querymatch := recordquerymatch(&collection, 0, uint64(99), leaf)
+    querymatch := recordquerymatch(&collection, 0, stake64.Encode(uint64(99)), leaf)
     keymismatch := recordkeymismatch(&collection, []byte("wrongkey"))
 
     if (keymatch.collection != &collection) || (querymatch.collection != &collection) || (keymismatch.collection != &collection) {
@@ -115,8 +113,4 @@ func TestRecord(test *testing.T) {
     if querymatchqueryerror == nil {
         test.Error("[record.go]", "[query]", "Query() does not yield an error when field is out of range.")
     }
-
-    ctx.should_panic("[constructors]", func() {
-        recordquerymatch(&collection, 4, uint64(99), leaf)
-    })
 }

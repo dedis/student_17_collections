@@ -19,12 +19,8 @@ func recordkeymatch(collection *collection, node *node) Record {
     return Record{collection, 0, []byte{}, true, node.key, node.values}
 }
 
-func recordquerymatch(collection *collection, field int, query interface{}, node *node) Record {
-    if field >= len(collection.fields) {
-        panic("Field out of range.")
-    }
-
-    return Record{collection, field, collection.fields[field].Encode(query), true, node.key, node.values}
+func recordquerymatch(collection *collection, field int, query []byte, node *node) Record {
+    return Record{collection, field, query, true, node.key, node.values}
 }
 
 func recordkeymismatch(collection *collection, key []byte) Record {
