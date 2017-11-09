@@ -113,4 +113,13 @@ func TestRecord(test *testing.T) {
     if querymatchqueryerror == nil {
         test.Error("[record.go]", "[query]", "Query() does not yield an error when field is out of range.")
     }
+
+    querymatch.field = 0
+    querymatch.query = querymatch.query[:6]
+
+    _, querymatchqueryerror = querymatch.Query()
+
+    if querymatchqueryerror == nil {
+        test.Error("[record.go]", "[query]", "Query() does not yield an error when query is malformed.")
+    }
 }
