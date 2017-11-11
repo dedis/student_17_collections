@@ -13,6 +13,7 @@ A `collection` is a Merkle-tree based data structure to securely and verifiably 
       + [The `collection` approach](#the-collection-approach)
    * [Hands on](#hands-on)
       + [Getting started](#getting-started)
+      + [Creating a `collection` and a `verifier`](#creating-a-collection-and-a-verifier)
       + [Manipulators](#manipulators)
 
 ## Overview
@@ -61,7 +62,7 @@ If you are already familiar with the basic notions behind a `collection`, and ju
 
 To install this library, open a terminal `go get` it:
 
-```go
+```bash
 go get github.com/dedis/student_17_collections
 ```
 
