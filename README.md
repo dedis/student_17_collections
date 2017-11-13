@@ -15,6 +15,7 @@ A `collection` is a Merkle-tree based data structure to securely and verifiably 
       + [Getting started](#getting-started)
       + [Creating a `collection` and a `verifier`](#creating-a-collection-and-a-verifier)
       + [Manipulators](#manipulators)
+      + [`Record`s and `Proof`s](#records-and-proofs)
 
 ## Overview
 
@@ -139,3 +140,68 @@ if err != nil {
 ```
 
 prints out `Applying update to unknown subtree. Proof needed.`. To manipulate records that are not locally stored by a `collection`, you first need to verify a `Proof` for those records. But all in due time, we will get to that later.
+
+#### `Record`s and `Proof`s
+
+Now that we know how to add, remove and update records, we can discuss what makes a `collection` such a useful instrument: `Proof`s.
+
+##### `Get()`ting a `Record`
+
+Let's first start with something easy. As we said, a `collection` is a *key / value* store. This means that in principle we could use a `collection` as we would use an (unnecessarily slow) Go `map`.
+
+As in any *key / value* store, data can be retrieved from a `collection` by providing a `key`. Following from the `my_collection_with_fields` example, we can try to retrieve two `Record`s, one existing and one non-existing, by:
+
+```Go
+another, anothererr := my_collection_with_fields.Get([]byte("anotherrecord")).Record()
+nonexisting, nonexistingerr := my_collection_with_fields.Get([]byte("nonexisting")).Record()
+```
+
+Now, **attention please!** Here one could expect `anothererr` to be `Nil` and `nonexistingerr` to be some `Error` that says something like: `Key not found`. However, *this is not what those errors are for!* When fetching a `Record`, not finding any association corresponding to a `key` here is not an error: indeed, the retrieval process was completed successfully and no association was found. So both of the above calls will return a `Record` object and no error. 
+
+However, we *can* use `Match()` to find out if an association exists with keys `anotherrecord` and `nonexisting` respectively by
+
+```Go
+fmt.Println(another.Match()) // true
+fmt.Println(nonexisting.Match()) // false
+```
+
+What call to `Get()` can return an `Error`, then? Simple: an `Error` is returned when a `collection` *does not know* if an association exists with the `key` provided because it is not storing it. For example a `verifier`, which does not permanently store any association, when queried as follows:
+
+```Go
+another, anothererr = my_verifier_with_fields.Get([]byte("anotherrecord")).Record()
+fmt.Println(anothererr)
+```
+
+prints out: `Record lies in an unknown subtree.`
+
+Along with `Match()`, a `Record` object offers two useful getters, namely:
+
+```Go
+fmt.Println(another.Key()) // Byte representation of "anotherrecord" (just in case you forgot what you asked for :P)
+
+anothervalues, err := another.Values() // Don't worry, err will be non-Nil only if you ask for Values() and Match() is false.
+fmt.Println(anothervalues[0].(uint64)) // 33
+fmt.Println(anothervalues[1].([]byte)) // Byte representation of "Make up your mind!"
+```
+
+Please notice the type assertions! Since each field can be of a different type, `Values()` returns a slice of `interface{}` that need type assertion to be used.
+
+Let us now stop for a second and underline what a `Record` is. A `Record` is just a structure that wraps the result of a query on a `collection`. It just says: "there is an association in this `collection` with key `anotherrecord` and values `33` and `Make up your mind!`", or: "there is no association in this `collection` with key `nonexisting`". You can **trust** that information only because, well, it was generated locally, by a computer that runs your software. However, what if, e.g., someone sent you a `Record` object over the Internet? You couldn't trust what it says more than any other message.
+
+That is why we need `Proof`s.
+
+##### `Get()`ting a `Proof`
+
+So far, we have encountered `verifier`s quite many times, and you are probably wondering what purpose do they serve: they cannot be manipulated, you cannot `Get()``Record`s out of them... apparently, you can only create one and have it sit there for no reason!
+
+
+
+
+
+
+
+
+
+
+
+
