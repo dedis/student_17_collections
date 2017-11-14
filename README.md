@@ -192,16 +192,149 @@ That is why we need `Proof`s.
 
 ##### `Get()`ting a `Proof`
 
-So far, we have encountered `verifier`s quite many times, and you are probably wondering what purpose do they serve: they cannot be manipulated, you cannot `Get()``Record`s out of them... apparently, you can only create one and have it sit there for no reason!
+So far, we have encountered `verifier`s quite many times, and you are probably wondering what purpose do they serve: they cannot be manipulated, you cannot `Get()``Record`s out of them... apparently, you can only create one and have it sit there for no reason! This is due to the fact that `verifier`s do not store any association, but only the *state* of the collection. However, we said that by just knowing the *state* of a collection, a `verifier` can learn about any association by verifying its `Proof`.
 
+In this section we will not discuss *how* this can happen, but rather focus on how to use `Proof` objects in the context of this library. For more details on how `Proof`s are implemented, jump to <!-- TODO --> [?](?).
 
+First of all, let's wipe the board and start again with an empty `collection` and an empty `verifier`. In this example, we will only have one `Stake64` field to make things less complicated (you can use what you have learned in the previous sections to generalize to a context with more than one field).
 
+```Go
+collection := EmptyCollection(Stake64{})
+verifier := EmptyVerifier(Stake64{})
+```
 
+Now, as we said, `collection` will store all the associations allowed by its *state*, while `verifier` will store no association. However, the *state* of `collection` is identical to that of `verifier`. Let us now `Get()` our first `Proof`:
 
+```Go
+proof, err := collection.Get([]byte("mykey")).Proof()
+```
 
+Just like `Record`s, `Proof`s are valid even if no association is found with that key. Just like a `Record`, you can
 
+```Go
+fmt.Prinltn(proof.Match())
+```
 
+and get `false` printed out. Unlike a `Record`, however, a `Proof` is much more than an assertion which you can trust, in general, only if it was generated locally. A `Proof` actually contains a mathematical proof that says: *"association X exists under state Y"*, that can be verified without need of any other inforation. 
 
+A key feature of `collection`s is that they can prove not only the existence of an association, but also its non-existence. In this case, `proof` indeed proves that no association with key `[]byte("mykey")` exists under the state that `collection` and `verifier` share.
 
+Now, let's feed `proof` to `verifier`:
 
+```Go
+if verifier.Verify(proof) {
+	fmt.Println("Yay!")
+}
+```
 
+Yes, you guessed right: the above prints out `Yay!`. `proof` was successfully verified because:
+
+ - It is consistent (each step is mathematically valid).
+ - It starts with the same *state* as `verifier`, i.e., it proves something about the *state* that `verifier` shares with the `collection` that generated `proof`.
+
+Calling `Verify()` on a `Proof` has not only the effect of returning `true` if the `Proof` is valid. It also serves the purpose to (sometimes temporarily) **extend** the knowledge of the `collection` that verifies it. Since it `Verify()`ed `proof`, `verifier` is storing the information needed to prove that `mykey` does not exist under its state and (see <!-- TODO --> [?](?) to find out why) to **add** a new association with key `mykey` and autonomously compute its new *state* accordingly.
+
+Let's try this out. Indeed, if we try:
+
+```Go
+proof, err = verifier.Get([]byte("mykey")).Proof()
+```
+
+we get `err == nil`. You can also `Get()` a `Record` if you don't need a `Proof`:
+
+```Go
+record, recerr := verifier.Get([]byte("mykey")).Record()
+```
+
+Now let's try to use the same manipulator to add a record with key `mykey` to both `collection` and `verifier`:
+
+```Go
+err = collection.Add([]byte("mykey"), uint64(42)) // Success
+err = verifier.Add([]byte("mykey"), uint64(42)) // Success!!
+```
+
+It worked! Thanks to `proof`, `verifier` had temporarily stored enough information to be able to manipulate `mykey`. `verifier` has autonomously recomputed a new *state*, from which the association `mykey -> 42` can be proved! You will notice, however, that if you now try:
+
+```Go
+proof, err = collection.Get([]byte("mykey")).Proof()
+```
+
+you will successfully get a `proof`, now with `proof.Match() == true`, that proves that `mykey` exists under the new state and is associated to `42`. Buf if you try the same with `verifier`:
+
+```Go
+proof, err = verifier.Get([]byte("mykey")).Proof()
+```
+
+you will get again the error `Record lies in an unknown subtree.`! What happened? Did `verifier` forget about `mykey`? **Yes**, because that is what `verifier`s are supposed to do: learn about a record only for the time strictly necessary, then forget about everything to save space. A **garbage collection** mechanism is implemented in all `collection`s so that when a record lies outside their `Scope` (see [`Scope`s](#scopes) for more information) it is removed:
+
+ - After any manipulator is called (regardless of the key), if a transaction is not in progress (see [Transactions](#transactions) for more information).
+ - At the `End()` of a transaction otherwise.
+
+Let's now go back to `collection` and `verifier` and notice how their *states* are the same: they are still in sync. Now `collection` stores an association, `verifier` doesn't, but can learn about the association when needed without possibility of being fooled: it just needs a `Proof`.
+
+##### Back to the permission levels example
+
+**Congratulations!** Now you have enough knowledge on `collection`s to fully implement the example described in [Basic use example](#basic-use-example). Well, maybe you also need to know that we also made it simple to serialize and deserialize `Proof`s:
+
+```Go
+buffer := collection.Serialize(proof) // A []byte that contains a representation of proof. Feel free to send this over the Internet, or with a carrier pigeon!
+proofagain, deserializeerr := collection.Deserialize(buffer) // It works, and you get proof again in proofagain
+```
+
+On the server side we will generate three `collection`s
+
+```Go
+admin := EmptyCollection()
+readwrite := EmptyCollection()
+read := EmptyCollection()
+```
+
+and each verifier will generate three `verifier`s
+
+```Go
+admin := EmptyVerfier()
+readwrite := EmptyVerifier()
+read := EmptyVerifier()
+```
+
+(both with no fields, as they represent a set). As key, they will use their public keys. This will also allow them to verify signatures. Now, say that an administrator sends its public key `padm` and a signed `(message, signature)` to add the public key `pwrite` to the `readwrite` `collection`.
+
+On the server side:
+
+```Go
+adm, _ := admin.Get(padm).Record() // It will not fail, the collection is storing all the associations.
+if adm.Match() {
+	// Key padm actually belongs to an administrator!
+	// (Verify that signature is valid for message)
+	
+	proofwrite, _ := readwrite.Get(pwrite).Proof()
+	if proofwrite.Match() {
+		// Send an error back: pwrite already exists in the readwrite collection, it cannot be added twice!
+	} else {
+		proofadm, _ := admin.Get(padm).Proof()
+		// Broadcast to all verifiers: padm, proofadm, message, signature, pwrite, proofwrite
+	}
+}
+```
+
+And on the client side:
+
+```Go
+if !equal(padm, proofadm.Key()) || !(admin.Verify(proofadm)) || !equal(pwrite, proofwrite.Key()) || !(readwrite.Verify(proofwrite)) {
+	// We have a cheater here! Return error.
+}
+
+if !(proofadm.Match()) {
+	// There is no admin with key padm. Return error.
+}
+
+if proofwrite.Match() {
+	// pwrite is already in the readwrite collection. Return error.
+}
+
+// (Verify that signature is valid for message)
+
+readwrite.Add(pwrite)
+```
+
+And it's done! Every verifier still stores O(1) data but, provided with a `Proof`, they will always be able to verify that `pwrite` belongs to a user with `readwrite` privileges.
