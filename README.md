@@ -16,6 +16,9 @@ A `collection` is a Merkle-tree based data structure to securely and verifiably 
       + [Creating a `collection` and a `verifier`](#creating-a-collection-and-a-verifier)
       + [Manipulators](#manipulators)
       + [`Record`s and `Proof`s](#records-and-proofs)
+- [Design](#design)
+   * [Collections and trees](#collections-and-trees)
+      + [Hasing tuples](#hashing-tuples)
 
 ## Overview
 
@@ -57,7 +60,7 @@ Our users can therefore make use of the untrusted server as follows:
 
 ### Hands on
 
-If you are already familiar with the basic notions behind a `collection`, and just need to get started, this section is what you are looking for. If you need a better understanding of how a `collection` works, you might want to skip this section for now, and dive in [`collection` for dummies](#collection-for-dummies), where you will find all the information you need to bootstrap yourself in the world of `collection`s.
+If you are already familiar with the basic notions behind a `collection`, and just need to get started, this section is what you are looking for. If you need a better understanding of how a `collection` works, you might want to skip this section for now, and dive in [Design](#design), where you will find all the information you need to bootstrap yourself in the world of `collection`s.
 
 #### Getting started
 
@@ -338,3 +341,136 @@ readwrite.Add(pwrite)
 ```
 
 And it's done! Every verifier still stores O(1) data but, provided with a `Proof`, they will always be able to verify that `pwrite` belongs to a user with `readwrite` privileges.
+
+## Design
+
+### Collections and trees
+
+#### Hashing tuples
+
+As we will see, collections make extensive use of a cryptographically secure hash function (namely, `SHA256`). We will need, however, to hash data structures that cannot be canonically serialized into a string, and in general *how* objects are hashed will be of critical importance to the overall security of the protocol.
+
+In this section, we will define a serialization protocol that we will use from now on to express the general notion of hashing a tuple of objects.
+
+##### Allowed types
+
+Let `X0, ..., Xt` be a tuple of objects. Then `sha256(X0, ..., Xt)` is defined and returns a `[32]byte` digest if every `Xi` has one of the following types:
+
+* `bool`
+* `int8`
+* `int16`
+* `int32`
+* `int64`
+* `uint8`
+* `uint16`
+* `uint32`
+* `uint64`
+* `string`
+
+or any slice tensor of the above, of arbitrary order. For example the following types can be provided to `sha256`:
+
+* `[]uint8`
+* `[][]string`
+* `[][][][]uint64`
+
+Note, however, that `sha256` does **not** accept arrays, so for example `sha256([3]int32{1, 2, 3})` will panic. Moreover, only integer values of known size are accepted: for example, `int` may not have a uniform size across multiple platforms, resulting in different hashes for objects that are semantically identical.
+
+##### Serialization protocol
+
+Cryptographic hash functions are designed to map, in a collision-resistant way, arbitrary-length bitstrings to bitstrings of fixed size (in this case, 32 bytes). In order for `sha256(...)` to be collision-resistant as well, we need to define an injective map between a tuple of objects of arbitrary (allowed) type and the set of finite-length bitstrings. 
+
+This is achieved via a type-aware serialization function (we will call it `serialize` here, in the code it is embedded directly into the `sha256` function) that follows the following rules.
+
+###### Tuples
+
+`serialize(X0, ..., Xt) = serialize(X0) + ... + serialize(Xt)` where `+` denotes the concatenation of bitstrings.
+
+###### Integers and booleans
+
+`serialize(X)`, with `X` integer or boolean, is given by a one-byte unsigned type prefix, followed by a **big endian** encoding its value (booleans are encoded as a one-byte unsigned integer whose value is `0` if the boolean is `false`, and `1` if it is `true`). The type prefix assumes the following values on the allowed types:
+
+ Type    | Prefix | Type    | Prefix | Type    | Prefix |
+---------|--------|---------|--------|---------|--------|
+`bool`   | 0      | `int8`  | 1      | `int16` | 2      |
+`int32`  | 3      | `int64` | 4      | `uint8` | 5      |
+`uint16` | 6      | `uint32`| 7      | `uint64`| 8      |
+
+For example: 
+
+ * `serialize(int32(1244)) = 03 00 00 04 dc` (type prefix (3 for `int32`) followed by four bytes representing 1244 in big endian format).
+ * `serialize(uint32(1244)) = 07 00 00 04 dc` (same as above, but with different type prefix (7 for `uint32`)).
+ * `serialize(uint64(0)) = 08 00 00 00 00 00 00 00 00` (total of nine bytes, one for the type prefix and eight for the value).
+ * `serialize(false) = 00 00` (first `00` represents the `bool` type prefix, the second represents the `false` value).
+ * `serialize(true) = 00 01` (same as above, `01` represents the value `true`).
+ * `serialize(int8(123)) = 01 7b` (one byte for the type prefix, one for the value).
+
+###### Integer and boolean slices
+
+`serialize(X)`, with `X` a slice of integers or booleans (like `[]bool` or `[]uint64` but **not** like `[][]int32`), is given by a one-byte unsigned type prefix, followed by a 64-bit **big endian** encoding of the size of the slice, followed by the concatenation of the encodings of every value in the array. The type prefix assumes the following values on the allowed types:
+
+ Type      | Prefix | Type      | Prefix | Type      | Prefix |
+-----------|--------|-----------|--------|-----------|--------|
+`[]bool`   | 9      | `[]int8`  | 10     | `[]int16` | 11     |
+`[]int32`  | 12     | `[]int64` | 13     | `[]uint8` | 14     |
+`[]uint16` | 15     | `[]uint32`| 16     | `[]uint64`| 17     |
+
+For example:
+
+* `serialize([]bool{true, false, true, true, false}) = 09 00 00 00 00 00 00 00 05 01 00 01 01 00` (type prefix (9 for `[]bool`), followed by eight bytes representing the length of the slice (5), followed by the encoding of the five boolean values in the slice).
+* `serialize([]int16{1, 2, 3}) = 0b 00 00 00 00 00 00 00 03 00 01 00 02 00 03` (type prefix (11 for `[]int16`), followed by the length of the slice (3), followed by six bytes encoding the three integers).
+* `serialize([]byte("Hello World")) = 0e 00 00 00 00 00 00 00 0b 48 65 6c 6c 6f 20 57 6f 72 6c 64` (type prefix (14 for `[]uint8`), followed by the length of the slice (11), followed by the values in the slice (here, the ASCII encoding of `Hello World`)).
+
+###### Strings
+
+`serialize(X)` with `X` a `string` is given by a one-byte type unsigned type prefix with value 18, followed by a 64-bit **big endian** encoding of the size of the slice, followed by the byte representation of the string in ASCII.
+
+For example, following from the previous example we will have `serialize("Hello World") = 12 00 00 00 00 00 00 00 0b 48 65 6c 6c 6f 20 57 6f 72 6c 64` (same as in `serialize([]byte("Hello World"))`, with a different type prefix (18 for `string`).
+
+###### Slices
+
+`serialize(X)`, with X a slice that is not a slice of integers or booleans (like `[][]uint16` or `[]string`, but **not** like `[]bool`) is given by a one-byte unsigned type prefix with value 19, followed by a 64-bit **big endian** encoding of the size of the slice, followed by `serialize(X[0], X[1], ...)`.
+
+Two things can be noted:
+
+ * This allows serialization of slice tensors with arbitrary order and non-uniform dimensionality. For example, we can call successfully compute `serialize([][][]int8{[][]int8{[]int8{1, 2}, []int8{3, 4, 5}, []int8{6, 7, 8, 9}}, [][]int8{}})`.
+ * This causes a repetition of type prefixes in contexts where they could be deduced. For example, the type prefix for `string` will appear two times in the output of `serialize([]string{"Hello", "World"})`. Since this repetition has been explicitly optimized for the most common slices, and only occurs for more rare, higher order slice tensors, we don't expect this to be a critical overhead in any real-world scenario.
+
+For example,
+
+```
+serialize([][][]int8{
+   [][]int8{
+      []int8{1, 2}, 
+      []int8{3, 4, 5}, 
+      []int8{6, 7, 8, 9}
+   }, 
+   [][]int8{}
+})
+```
+
+will yield
+
+```
+13 // slice
+00 00 00 00 00 00 00 02 // Two elements in the slice
+   13 // slice
+   00 00 00 00 00 00 00 03 // Three elements in the slice
+      0a // slice of int8
+      00 00 00 00 00 00 00 02 // Two elements in the slice
+         01 02 // Elements of the int8 slice
+      0a // slice of int8
+      00 00 00 00 00 00 00 03 // Three elements in the slice
+         03 04 05 // Elements of the int8 slice
+      0a // slice of int8
+      00 00 00 00 00 00 00 04 // Four elements in the slice
+         06 07 08 09
+   13 // slice
+   00 00 00 00 00 00 00 00 // No elements in the slice
+```
+
+##### Hashing
+
+It is easy to see that the protocol described above defines an injection between tuples of objects and bitstrings. Indeed, one can sequentially read a well-formed bitstring output by `serialize` and reconstruct the original object, as types are encoded in type prefixes, variable size objects always have their size explicited before their values, and values are encoded in a way that is platform-independent.
+
+We can finally define `sha256(X0, ..., Xt) = csha256(serialize(X0, ..., Xt))`, where `csha256` is any implementation of the `SHA256` hash on a sequence of bytes.
+
