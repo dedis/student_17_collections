@@ -483,10 +483,43 @@ Here we will see how a `collection` makes use of Merkle trees to store its assoc
 
 #### Naive approach
 
-We start by noting that a *key / value* store can be seen as a set of couples `(key, value)` with the property that if `(key1, value1)` and `(key2, value2)` are in the set, then `key1 != key2`.
+We start by noting that a well-formed *key / value* store can be seen as a set of couples `(key, value)` with the property that if `(key1, value1)` and `(key2, value2)` are in the set, then `key1 != key2`.
 
 `collection`s organize these associations on the leaves of a Merkle tree. Here we describe a naive approach to do this and discuss its limitations; in the next section we will see how they can be overcome.
 
 Consider the case where we want to store on a Merkle Tree the following associations: `cat -> four`, `spider -> eight`, `chicken -> two`, `ant -> six` and `snake -> zero`.
 
+We could organize those associations in a Merkle tree as follows:
+
 ![naivetree](assets/images/naivetree.png "Naive Merkle tree approach")
+
+where `h` is any cryptographically secure hash function like `sha256` (which we described in [Hashing tuples](#hashing-tuples)). Here we have three types of nodes:
+
+ * **Internal nodes** (blue) only have one *label* field `H[i][j]`, `i` being the depth of the node (i.e., number of steps from the root) and `j` being a number between `0` and `2^i - 1`. For internal nodes we have `H[i][j] = h(H[i + 1][2 * j], H[i + 1][2 * j + 1])`.
+ * **Leaves** (green) have three fields: a *label* `H[i][j]`, a *key* `K[j]` and a *value* `V[j]`. All leaves have the same depth. For leaves we have `H[i][j] = h(K[j], V[j])`. 
+ * **Placeholder leaves** (yellow) are special leaves, whose *key* and *value* fields are `null` (in the code, they will be represented by a zero-length slice of bytes).
+
+##### Usage example
+
+Now, consider a scenario where Alice has a copy of the *key / value* store, and Bob only has a copy of `Hroot`. Bob knows that `Hroot` is the label of the root of a well-formed *key/value* store (as we defined earlier, this means that no key is repeated twice). Now, Bob wants to know what is the value associated to `ant`. He queries Alice which, as in a classical Merkle tree paradigm, replies with the following array: 
+
+```
+[
+   (H[1][0], H[1][1]), 
+   (H[2][0], H[2][1]), 
+   (H[3][2], H[3][3]), 
+   (K[3], V[3])
+]
+```
+
+Now Bob can verify that `h(H[1][0], H[1][1]) == Hroot`: since `h` is cryptographically secure this means that both `H[1][0]` and `H[1][1]` are correct. He then proceeds to check `h(H[2][0], H[2][1]) == H[1][0]`, `h(H[3][2], H[3][3]) == H[2][1]` and `h(K[3], V[3]) == H[3][3]`, inductively verifying that `K[3]` and `V[3]` are indeed correct. Now he can check `K[3] == ant` and finally  discover that the well-formed *key / value* store with root label `Hroot` contains the association `ant -> six`.
+
+##### Denying associations
+
+As we have seen in the previous example, it can be easily proven that a malicious Alice will never be able to prove a **false** association from the root label of a well-formed *key / value* store.
+
+However, she can't (efficiently) *deny* the existence of one. Let us imagine that, instead of issuing a query for `ant`, Bob asked Alice about `goat`. What could Alice send to Bob in order to prove that there is no association with key `goat` in the *key / value* store?
+
+Indeed, it is easy to see that the only way to prevent a malicious Alice from hiding the existence of an association is to force her to send to Bob **all** the associations in the *key / value* store!
+
+This is due to the fact that we did not introduce any structure in *how* elements are placed within the tree. Indeed, the associations in the tree above were placed in arbitrary order. 
