@@ -19,6 +19,7 @@ A `collection` is a Merkle-tree based data structure to securely and verifiably 
 - [Design](#design)
    * [Collections and trees](#collections-and-trees)
       + [Hasing tuples](#hashing-tuples)
+      + [Merkle trees and key value stores](#merkle-trees-and-key-value-stores)
 
 ## Overview
 
@@ -474,3 +475,18 @@ It is easy to see that the protocol described above defines an injection between
 
 We can finally define `sha256(X0, ..., Xt) = csha256(serialize(X0, ..., Xt))`, where `csha256` is any implementation of the `SHA256` hash on a sequence of bytes.
 
+### Merkle trees and key value stores
+
+It is a known result that data can be organized in a [Merkle tree](https://en.wikipedia.org/wiki/Merkle_tree) to provide the same level of hashing security as a naive serialize-then-hash approach while allowing efficient (usually O(log(N))) random read-write access to arbitrary parts of the data.
+
+Here we will see how a `collection` makes use of Merkle trees to store its associations.
+
+#### Naive approach
+
+We start by noting that a *key / value* store can be seen as a set of couples `(key, value)` with the property that if `(key1, value1)` and `(key2, value2)` are in the set, then `key1 != key2`.
+
+`collection`s organize these associations on the leaves of a Merkle tree. Here we describe a naive approach to do this and discuss its limitations; in the next section we will see how they can be overcome.
+
+Consider the case where we want to store on a Merkle Tree the following associations: `cat -> four`, `spider -> eight`, `chicken -> two`, `ant -> six` and `snake -> zero`.
+
+![naivetree](assets/images/naivetree.png "Naive Merkle tree approach")
