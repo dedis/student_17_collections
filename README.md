@@ -20,6 +20,7 @@ A `collection` is a Merkle-tree based data structure to securely and verifiably 
    * [Collections and trees](#collections-and-trees)
       + [Hasing tuples](#hashing-tuples)
       + [Merkle trees and key value stores](#merkle-trees-and-key-value-stores)
+      + [Values](#values)
 
 ## Overview
 
@@ -523,3 +524,53 @@ However, she can't (efficiently) *deny* the existence of one. Let us imagine tha
 Indeed, it is easy to see that the only way to prevent a malicious Alice from hiding the existence of an association is to force her to send to Bob **all** the associations in the *key / value* store!
 
 This is due to the fact that we did not introduce any structure in *how* elements are placed within the tree. Indeed, the associations in the tree above were placed in arbitrary order. 
+
+#### Tree topology
+
+In the previous section we have shown how a trivial Merkle tree approach is not sufficient to efficiently hash a *key / value* store, and implied that some structure needs to be added to *where* the leaf containing each entry should be stored. Here we expand on that idea to get to a complete description of how Merkle trees are implemented in a `collection`.
+
+##### Unique path
+
+Let us go back to the example where Bob knows the root label `Hroot` of a Merkle tree-based *key / value* store that associates to each animal its number of legs, and asks Alice (who has the full tree) for an entry.
+
+In the previous section, we defined a well-formed *key / value* store as a set of associations stored on a Merkle tree, with the only condition of keys being non-repeating. When Bob asks for a proof, therefore, it is completely up to Alice to decide *where* to navigate. If Bob had, however, a way to *know* a priori where Alice should navigate in order to retrieve the key he is asking for, Alice could prove the non-existence of an association just by appropriately navigating where the association *should* be, and show that it isn't there.
+
+This can be easily achieved by noting that the bit expansion of an `n`-bit hash uniquely defines a path of length `n` on a binary tree. Simply put, we can say that a `0` bit means `go to the left child` and a `1` bit means `go to the right child`: as long as the depth of the tree is less than `n` (remember, e.g., `n = 256` in the SHA256 case), this can be used to uniquely map a key to a leaf! Instead of arbitrarily navigating left or right, we can force Alice to:
+
+ * Compute the hash of the key requested by Bob.
+ * Use its bit expansion to navigate from the root down until a leaf is encountered.
+ * Provide Bob with that leaf and its proof. Note that Bob can autonomously compute the hash of the key he requested, so he can check that Alice navigated honesly along the tree.
+
+Now, if the tree is organized so that every association must lie on a leaf along the path defined by the hash of its key, proving the non-existence of an association `A` reduces to navigating along its path until a leaf is found, and show that it doesn't store `A`!
+
+##### Rules of a `collection` tree
+
+We can now extend the definition of a well-formed, Merkle-tree based *key / value* store to account for path uniqueness. As we will see, we will also add rules to minimize the size of the tree, so as to keep its storage requirements as low as possible. Indeed, we will see how the following set of rules creates a bijection between sets of associations and well-formed trees.
+
+The rules are the following:
+
+ 1. As in the previous definition of well-formed *key / value* store, keys form a non-repeating set.
+ 2. There are three types of nodes:
+    * Internal nodes have exactly two children. The root is **always** an internal node.
+    * Leaves have no children and store an association.
+    * Placeholder leaves have no children and store no association.
+ 3. An association is always stored on a leaf along the path defined by the bit expansion of the hash of its key (as described in the previous section).
+ 4. An internal node that is not the root cannot have as children one leaf and one placeholder leaf.
+
+Here, Rule 1 prevents key collisions: the same key cannot appear more than once in the collection. 
+
+Rule 2 defines the types of nodes that are allowed; in particular placeholder leaves proved to be a simpler alternative to defining trees with variable connectivity for internal nodes. 
+
+Rule 3 stems from what we observed in the previous sections: forcing a association to lie on a path defined by the bit expansion of the hash of its key makes it impossible for a prover to deny associations on a well-formed tree. 
+
+Finally, Rule 4 is there to keep the tree as compact as possible. Indeed, we can notice that Rule 3 does not define *one* position in the tree where an association should lie, but rather a set of positions along a *path*. Whenever a leaf `L` and a placeholder `P` are siblings under an internal node `N`, removing `P` and replacing `N` with `L` keeps the association in `L` on the path defined by its key (it just uses one bit less) and saves one placeholder leaf and one internal node, thus making the tree smaller.
+
+Applying Rule 4 means that each association lies along the path defined by its key, but also lies at the smallest depth possible. Since only one tree per set of associations satisfies this property, Rule 4 makes the mapping between sets of associations and trees a bijection.
+
+
+
+
+
+
+
+
