@@ -20,7 +20,7 @@ A `collection` is a Merkle-tree based data structure to securely and verifiably 
    * [Collections and trees](#collections-and-trees)
       + [Hasing tuples](#hashing-tuples)
       + [Merkle trees and key value stores](#merkle-trees-and-key-value-stores)
-      + [Values](#values)
+      + [Values and sharding](#values-and-sharding)
 
 ## Overview
 
@@ -598,6 +598,66 @@ which allows us to produce a proof both for the existence and the value associat
 ![tree](assets/images/nonexistingnavigation.gif "Navigation to a non-existing key")
 
 which allows us to produce a proof for the non-existence of an association for the key `penguin`: indeed, if navigating along the path defined by the bit expansion of the hash of `penguin` yields a leaf that does not contain an association for `penguin`, then no association for `penguin` can exist on a well-formed tree due to Rule 3.
+
+### Values and sharding
+
+In the previous section, we have discussed how a set of `(key, value)` associations can be organized on the leaves of a Merkle tree in order to provide verifiability for both existence and non-exisistence of associations.
+
+Two details, however, still need to be discussed:
+
+ * `collection`s are more than a *key / value* store, as they allow values to be navigated (see [?](?) for how to use this feature in your code).
+ * A `collection` can store arbitrary subset of the associations. Indeed, we earlier said that a `verifier` is just a `collection` that does not store any association.
+
+#### Values
+
+As we will see later in code, some fields can be navigated. For example, `Stake64` allows for navigation by cumulative inversion, so that picking a random number between 0 and the total amount of stake in a `collection` minus one, and using that to navigate on the `Stake64` field, will yield a random record, with probability proportional to its amount of stake.
+
+Navigation is in general allowed by propagating values upwards from the leaves up to the root. For example, `Stake64` values propagate up the tree by sum: each internal node will have a value equal to the sum of the values of its children, and placeholder leaves will have value zero.
+
+As we will see in the next section, internal nodes also have (one or more) values.
+
+#### Sharding
+
+Throughout the [Overview](#overview) section of this documentation, we have implied that, while the *state* of a `collection` (which now we know to be the label of the root of a Merkle tree) uniquely determines what associations it **can** store, a `collection` can in general store an arbitrary subset of them. Indeed, we have said that a `verifier` is just a `collection` that permanently stores no association.
+
+This is achieved by adding one last type of node to the mix: the **unknown** node. An *unknown* node is a special kind of node (marked by an appropriate flag) for which only the label is known. It has no children, no key and no values. Turning a node into an *unknown* node allows to save space while still being able to verify proofs, as its content and all its children get deleted.
+
+For example, if we wanted our example `collection` to only store the number of legs for `cat` and `snake`, we could turn the node `(2, 0)` into an unknown node:
+
+![tree](assets/images/unknown.png "Tree with unknown node")
+
+As you can see, `H[2][0]` is now a given of the Merkle tree. We don't know if it is the label of an internal node, and if so, what and how many nodes should be under it. We can note, however, that:
+
+ * Rule 2 still applies, as node `(1, 0)` still has two children, one of which is unknown.
+ * Rule 3 still applies to all the leaves left: indeed making a node unknown removes all the leaves that appear under it.
+ * This `collection` has no information about some associations. However when, e.g., the `collection` is queried for `spider`, its navigation will bring it to an unknown node, and an error can be safely returned (remember the error `Record lies in an unknown subtree.` that we encountered in [`Record`s and `Proof`s](#records-and-proofs)?).
+ * This `collection` is still able to form perfectly valid Merkle tree proofs for all the associations it is storing.
+ * Whenever provided with a Merkle tree proof that provides information about the node `(2, 0)`, the `collection` can verify its validity and use that information to **restore** its knowledge about that node. This is ultimately how `verifier`s work: they temporarily absorb knowledge learned by Merkle tree proofs, use that knowledge, if necessary, to apply updates and recompute a new Merkle tree root, then they drop all the records they are temporarily storing by making the root unknown. In fact, here is what the tree of a `verifier` looks like:
+
+![tree](assets/images/unknownroot.png "Verifiers have unknown root.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
