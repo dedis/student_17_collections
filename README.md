@@ -567,6 +567,43 @@ Finally, Rule 4 is there to keep the tree as compact as possible. Indeed, we can
 
 Applying Rule 4 means that each association lies along the path defined by its key, but also lies at the smallest depth possible. Since only one tree per set of associations satisfies this property, Rule 4 makes the mapping between sets of associations and trees a bijection.
 
+##### Example tree
+
+Let us now apply the above rules to the example we already discussed, where we want to associate to each animal its number of legs. As we will soon see, a key in a `collection` will be represented by a slice of bytes. We can therefore compute the hash (and therefore the path) for each of `key` by `sha256([]byte(key))`:
+
+Key       | Hash (hex) | Hash (bin)              | Path                  |
+----------|------------|-------------------------|-----------------------|
+`cat`     | `c7580f..` | `1100 0011 0101 1000..` | ⇘⇘⇙⇙ ⇙⇙⇘⇘ ⇙⇘⇙⇘ ⇘⇙⇙⇙.. |
+`spider`  | `09d063..` | `0000 1001 1101 0000..` | ⇙⇙⇙⇙ ⇘⇙⇙⇘ ⇘⇘⇙⇘ ⇙⇙⇙⇙.. |
+`chicken` | `33cd78..` | `0011 0011 1100 1101..` | ⇙⇙⇘⇘ ⇙⇙⇘⇘ ⇘⇘⇙⇙ ⇘⇘⇙⇘.. |
+`ant`     | `3a236f..` | `0011 1010 0010 0011..` | ⇙⇙⇘⇘ ⇘⇙⇘⇙ ⇙⇙⇘⇙ ⇙⇙⇘⇘.. |
+`snake`   | `6d717f..` | `0110 1101 0111 0001..` | ⇙⇘⇘⇙ ⇘⇘⇙⇘ ⇙⇘⇘⇘ ⇙⇙⇙⇘.. |
+
+And then apply Rules 2, 3 and 4 to build the following tree:
+
+![tree](assets/images/tree.png "Collection tree approach")
+
+As you can see:
+
+ * Internal nodes always have exactly two children.
+ * Each association is stored in a leaf that lies on a path determined by the bit expansion of the hash of its key.
+ * A leaf and a placeholder leaf are never siblings. Indeed, the only placeholder leaf is sibling of an internal node.
+
+This tree can now be securely navigated to prove either the existence and the non-existence of a key. For example, if we wanted to query the tree for `ant`, we would navigate as follows:
+
+![tree](assets/images/navigation.gif "Navigation to an existing key")
+
+which allows us to produce a proof both for the existence and the value associated to `ant`. If instead we chose to query the tree for `penguin`, which hashes to `38b49e..`, we would navigate as follows:
+
+![tree](assets/images/nonexistingnavigation.gif "Navigation to a non-existing key")
+
+which allows us to produce a proof for the non-existence of an association for the key `penguin`: indeed, if navigating along the path defined by the bit expansion of the hash of `penguin` yields a leaf that does not contain an association for `penguin`, then no association for `penguin` can exist on a well-formed tree due to Rule 3.
+
+
+
+
+
+
 
 
 
