@@ -13,3 +13,6 @@ script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -t 9a520e59-5f33-4d21-9d88-fabbf3f6572a
+
+notifications:
+  email: false
